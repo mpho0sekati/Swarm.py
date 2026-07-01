@@ -77,8 +77,17 @@ Tech: FastAPI, PostgreSQL, JWT auth, Streamlit dashboard.
 | 🧪 | QA & Test Engineer | pytest suites, fixtures, integration tests |
 | 📖 | Documentation | README, docstrings, setup guides |
 | 🔍 | Code Reviewer | Quality review, bug detection, security check |
+| 🛡️ | Safety Officer | Comprehensive safety & ethics compliance audit |
 
-Use the **Swarm Size** slider (2–8) to deploy a subset.
+### 🐜 ACO & Safety Features
+
+**Swarm Intelligence (ACO):**
+The standalone `ant_safe_swarm.py` script implements Ant Colony Optimization (ACO) principles. Agents ("ants") explore task solutions and leave "pheromone" trails (success weights) that influence future path selection, optimizing the swarm's performance over time.
+
+**Integrated Safety Guardrails:**
+The swarm factory now includes a mandatory **Safety & Ethics Compliance Officer** (Agent #9). This agent performs a comprehensive final audit of all generated project files to ensure they are free of PII, security vulnerabilities, and harmful content. For per-interaction safety logic, refer to the `ant_safe_swarm.py` reference implementation.
+
+Use the **Swarm Size** slider (2–9) to deploy a subset.
 
 ---
 

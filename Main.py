@@ -343,6 +343,16 @@ AGENT_ROLES = [
         ),
         "icon": "🔍",
     },
+    {
+        "role": "Safety & Ethics Compliance Officer",
+        "goal": "Ensure all generated content and code strictly adhere to AI safety and ethics standards",
+        "backstory": (
+            "A specialist in AI safety, ethics, and legal compliance. "
+            "You audit every line of code and documentation to prevent "
+            "PII exposure, bias, and security vulnerabilities."
+        ),
+        "icon": "🛡️",
+    },
 ]
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -546,6 +556,20 @@ def build_tasks(instructions: str, agents: list[Agent], cycle: int) -> list[Task
         ),
         expected_output="README.md as a labelled markdown block.",
         agent=agent_for("Documentation Specialist", "Swarm Commander"),
+    ))
+
+    # Task 8 — Safety & Ethics Audit
+    tasks.append(Task(
+        description=(
+            "Perform a Comprehensive Safety & Security Audit on all generated code and documentation.\n"
+            "Check for: PII leaks, insecure dependencies, hardcoded secrets, and biased language.\n"
+            "Provide a final safety report as a new file: safety_audit.md.\n"
+            "Output:\n"
+            "  # FILE: safety_audit.md\n"
+            "  ```markdown\n  <audit report>\n  ```"
+        ),
+        expected_output="safety_audit.md as a labelled markdown block.",
+        agent=agent_for("Safety & Ethics Compliance Officer", "Code Reviewer"),
     ))
 
     return tasks
@@ -826,7 +850,7 @@ with st.sidebar:
 
     max_cycles  = st.slider("Refinement Cycles", 1, 4, 2,
         help="Each cycle improves upon the previous output")
-    swarm_size  = st.slider("Swarm Size", 2, 8, 5,
+    swarm_size  = st.slider("Swarm Size", 2, 9, 5,
         help="Number of specialised agents")
     scaffold    = st.toggle("Full project scaffold", value=True)
     validate    = st.toggle("Syntax validation", value=True)
