@@ -102,6 +102,11 @@ When running `ant_safe_swarm.py` locally, a `swarm_report.md` is automatically g
 - Detailed outputs from each "ant" agent.
 - Performance summaries.
 
+**The Swarm Brain:**
+The swarm now features a "Brain" that provides both short-term and long-term memory:
+- **Short-Term (SQLite):** Pheromone levels (learning weights) are persisted in `pheromones.db`. This allows the swarm to remember which agent roles performed best for specific task types across different runs.
+- **Long-Term (Markdown):** Successful task completions are recorded in `swarm_brain.md`. This provides a human-readable history of the swarm's accomplishments and successful patterns.
+
 Use the **Swarm Size** slider (2–9) to deploy a subset.
 
 ---

@@ -1,6 +1,7 @@
 import os
 import sys
 import json
+import sqlite3
 import time
 import random
 from datetime import datetime
@@ -8,20 +9,52 @@ from typing import List, Dict, Any, Optional
 from groq import Groq
 
 class PheromoneMemory:
-    """Tracks and decays pheromone levels for different agent roles and task types."""
-    def __init__(self, evaporation_rate: float = 0.1):
+    """Tracks and decays pheromone levels for different agent roles and task types with SQLite persistence."""
+    def __init__(self, db_path: str = "pheromones.db", evaporation_rate: float = 0.1):
+        self.db_path = db_path
         self.evaporation_rate = evaporation_rate
-        # Structure: {task_type: {role: pheromone_level}}
         self.memory: Dict[str, Dict[str, float]] = {}
+        self._init_db()
+        self._load_memory()
+
+    def _init_db(self):
+        with sqlite3.connect(self.db_path) as conn:
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS pheromones (
+                    task_type TEXT,
+                    role TEXT,
+                    level REAL,
+                    PRIMARY KEY (task_type, role)
+                )
+            """)
+
+    def _load_memory(self):
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.execute("SELECT task_type, role, level FROM pheromones")
+            for row in cursor:
+                task_type, role, level = row
+                if task_type not in self.memory:
+                    self.memory[task_type] = {}
+                self.memory[task_type][role] = level
+
+    def _save_role(self, task_type: str, role: str, level: float):
+        with sqlite3.connect(self.db_path) as conn:
+            conn.execute("""
+                INSERT INTO pheromones (task_type, role, level)
+                VALUES (?, ?, ?)
+                ON CONFLICT(task_type, role) DO UPDATE SET level=excluded.level
+            """, (task_type, role, level))
 
     def get_pheromone(self, task_type: str, role: str) -> float:
-        return self.memory.get(task_type, {}).get(role, 1.0)  # Default pheromone level is 1.0
+        return self.memory.get(task_type, {}).get(role, 1.0)
 
     def deposit_pheromone(self, task_type: str, role: str, amount: float):
         if task_type not in self.memory:
             self.memory[task_type] = {}
         current = self.memory[task_type].get(role, 1.0)
-        self.memory[task_type][role] = current + amount
+        new_level = current + amount
+        self.memory[task_type][role] = new_level
+        self._save_role(task_type, role, new_level)
 
     def evaporate(self):
         for task_type in self.memory:
@@ -29,6 +62,28 @@ class PheromoneMemory:
                 self.memory[task_type][role] *= (1 - self.evaporation_rate)
                 if self.memory[task_type][role] < 0.1:
                     self.memory[task_type][role] = 0.1
+                self._save_role(task_type, role, self.memory[task_type][role])
+
+class SwarmBrain:
+    """Long-term task memory that persists successful task outcomes in a Markdown file."""
+    def __init__(self, filepath: str = "swarm_brain.md"):
+        self.filepath = filepath
+        if not os.path.exists(self.filepath):
+            with open(self.filepath, "w") as f:
+                f.write("# 🧠 Swarm Brain: Long-Term Memory\n\nTask history and successful patterns.\n\n")
+
+    def record_success(self, prompt: str, results: Dict[str, str]):
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        entry = f"## [{timestamp}] Task: {prompt}\n"
+        entry += "**Outcome:** Successful execution by swarm agents.\n\n"
+        for role, output in results.items():
+            # Extract first 200 chars for summary
+            summary = output.strip().split('\n')[0][:200]
+            entry += f"- **{role}**: {summary}...\n"
+        entry += "\n---\n\n"
+
+        with open(self.filepath, "a", encoding="utf-8") as f:
+            f.write(entry)
 
 class SafetyGuard:
     """Validates inputs and outputs against AI safety standards."""
@@ -87,6 +142,7 @@ class Swarm:
         self.client = Groq(api_key=api_key)
         self.model = model
         self.memory = PheromoneMemory()
+        self.brain = SwarmBrain()
         self.safety = SafetyGuard(self.client, model)
         self.roles = {
             "Coder": "Write high-quality, efficient Python code.",
@@ -148,6 +204,9 @@ class Swarm:
         if results:
             for role, output in results.items():
                 report_content += f"### {role}\n{output}\n\n"
+
+            # Record in long-term brain
+            self.brain.record_success(prompt, results)
 
             summary = results.get("Architect", "") + "\n" + results.get("Coder", "")
             print(summary[:500] + "...")
