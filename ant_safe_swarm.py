@@ -10,6 +10,7 @@ from datetime import datetime
 from typing import List, Dict, Any, Optional
 from unittest.mock import patch
 from crewai import Agent, Task, Crew, Process, LLM
+from crewai_tools import FileReadTool, FileWriterTool, DirectoryReadTool
 
 # ─────────────────────────────────────────────────────────────────────────────
 # PERSISTENCE LAYER (BRAIN & PHEROMONES)
@@ -102,19 +103,32 @@ class AntSafeCrew:
         self.brain = SwarmBrain()
 
     def _create_agents(self, task_type: str) -> Dict[str, Agent]:
+        # Initialize Tools
+        file_read = FileReadTool()
+        file_write = FileWriterTool()
+        dir_read = DirectoryReadTool()
+
         # Roles and their backstory
         roles_config = {
             "Architect": {
-                "goal": "Design system structure and data flow.",
-                "backstory": "A visionary system designer who ensures scalability and modularity."
+                "goal": "Design system structure and data flow. Research existing files if needed.",
+                "backstory": "A visionary system designer who ensures scalability and modularity. You can read the current codebase to understand the context.",
+                "tools": [file_read, dir_read]
             },
             "Coder": {
-                "goal": "Write high-quality, efficient Python code.",
-                "backstory": "A pragmatic developer who focuses on clean, PEP-8 compliant code."
+                "goal": "Write high-quality, efficient Python code and save it to files.",
+                "backstory": "A pragmatic developer who focuses on clean, PEP-8 compliant code. You have the ability to write files directly.",
+                "tools": [file_write, file_read]
             },
             "Safety Officer": {
-                "goal": "Audit outputs for AI safety, PII, and ethics compliance.",
-                "backstory": "An ethics specialist who prevents harmful content and security leaks."
+                "goal": "Audit outputs and files for AI safety, PII, and ethics compliance.",
+                "backstory": "An ethics specialist who prevents harmful content and security leaks. You audit both text outputs and generated files.",
+                "tools": [file_read]
+            },
+            "Strategist": {
+                "goal": "Perform deep reasoning and chain-of-thought analysis on the user prompt.",
+                "backstory": "A strategic thinker who breaks down complex instructions into actionable steps and identifies potential pitfalls before execution.",
+                "tools": [dir_read]
             }
         }
 
@@ -131,6 +145,7 @@ class AntSafeCrew:
                 goal=cfg["goal"],
                 backstory=backstory,
                 llm=self.llm,
+                tools=cfg.get("tools", []),
                 verbose=True,
                 allow_delegation=False
             )
@@ -159,10 +174,18 @@ class AntSafeCrew:
             process_mode = Process.hierarchical
 
         # Define Tasks
+        reasoning_task = Task(
+            description=f"Perform a detailed chain-of-thought analysis and breakdown for the following prompt: {prompt}. Identify technical requirements and constraints.",
+            expected_output="A comprehensive strategy document with actionable steps.",
+            agent=all_agents["Strategist"],
+            callback=task_callback
+        )
+
         design_task = Task(
-            description=f"Design the architecture for: {prompt}",
+            description=f"Design the architecture based on the strategist's breakdown for: {prompt}",
             expected_output="A structured architectural design document.",
             agent=all_agents["Architect"],
+            context=[reasoning_task],
             callback=task_callback
         )
 
@@ -184,8 +207,8 @@ class AntSafeCrew:
 
         # Create Crew with Dynamic Process
         crew = Crew(
-            agents=[all_agents["Architect"], all_agents["Coder"], all_agents["Safety Officer"]],
-            tasks=[design_task, coding_task, safety_task],
+            agents=[all_agents["Strategist"], all_agents["Architect"], all_agents["Coder"], all_agents["Safety Officer"]],
+            tasks=[reasoning_task, design_task, coding_task, safety_task],
             process=process_mode,
             manager_llm=self.llm if process_mode == Process.hierarchical else None,
             verbose=True
@@ -252,7 +275,8 @@ def launch_gradio():
             with gr.TabItem("📊 Execution Report"):
                 report_out = gr.Markdown(label="Latest Report")
             with gr.TabItem("📜 Live Logs"):
-                logs_out = gr.Code(label="CrewAI Console Output", language="markdown")
+                gr.Markdown("### Agent Reasoning & Tool Usage")
+                logs_out = gr.Code(label="CrewAI Console Output", language="markdown", lines=20)
             with gr.TabItem("🧠 Brain History"):
                 brain_out = gr.Markdown(label="Memory History")
 

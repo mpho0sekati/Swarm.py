@@ -10,10 +10,18 @@ This repository contains two primary tools:
 
 ## 🚀 Quick Start
 
+**One-Command Setup:**
 ```bash
-pip install streamlit crewai groq litellm gradio
-streamlit run Main.py
+make setup
 ```
+
+**Launch Tools:**
+| Tool | Command |
+|------|---------|
+| **Interactive UI** | `make run-ui` |
+| **Project Factory** | `make run-factory` |
+| **Mock Demo (No Key)** | `make demo` |
+| **Clean Project** | `make clean` |
 
 1. Add your Groq API keys in the sidebar (as many as you have)
 2. Select your model (`llama-3.3-70b-versatile` recommended)

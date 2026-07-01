@@ -269,21 +269,21 @@ class GroqKeyPool:
 AGENT_ROLES = [
     {
         "role": "Swarm Commander",
-        "goal": "Parse user instructions, plan the architecture, and orchestrate the team",
+        "goal": "Execute a deep chain-of-thought analysis of instructions and orchestrate the swarm for peak efficiency",
         "backstory": (
-            "A battle-hardened software architect who has shipped production systems globally. "
-            "You read instructions carefully, break them into clear deliverables, "
-            "and ensure every agent produces what was actually asked for."
+            "A master strategist and Hermes-class architect. You don't just follow instructions; "
+            "you anticipate edge cases, model complex data flows, and decompose vague requests "
+            "into surgically precise technical deliverables. Your reasoning is your greatest tool."
         ),
         "icon": "🎯",
     },
     {
         "role": "Backend Engineer",
-        "goal": "Implement the core application logic exactly as instructed",
+        "goal": "Implement high-performance, secure, and idiomatic application logic",
         "backstory": (
-            "Senior Python engineer specialising in FastAPI and async code. "
-            "You produce clean, typed, production-grade code that does precisely "
-            "what the instructions specify — no more, no less."
+            "A world-class software engineer. You write Python code that is not only functional "
+            "but beautiful, efficient, and resilient. You leverage the latest async patterns "
+            "and ensure every function is typed, documented, and production-ready."
         ),
         "icon": "⚙️",
     },
