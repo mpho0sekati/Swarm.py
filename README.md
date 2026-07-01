@@ -2,7 +2,9 @@
 
 **Multi-key Groq · Instruction-driven · Auto rate-limit rotation · Full project scaffold**
 
-> Write your instructions. Add your Groq keys. Hit launch. Get a deployable project.
+This repository contains two primary tools:
+1. **The Scaffold Factory (`Main.py`)**: A Streamlit app that generates full-stack project structures from high-level instructions.
+2. **Ant-Safe Swarm Intelligence (`ant_safe_swarm.py`)**: A standalone reference implementation of a persistent, self-learning agent swarm using CrewAI and Ant Colony Optimization (ACO) principles.
 
 ---
 

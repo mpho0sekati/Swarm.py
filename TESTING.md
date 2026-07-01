@@ -4,6 +4,14 @@ Follow these instructions to verify the new Ant Colony Optimization (ACO) swarm,
 
 ---
 
+## 🧐 Reviewer's Quick Look
+If you only have 2 minutes, do this:
+1. **Logic Check:** Run `python demo_swarm_mock.py`. It proves the SQLite learning and Markdown history work without an API key.
+2. **UI Check:** If you are in a preview environment, visit `http://localhost:3000`.
+3. **Safety Check:** Read `ant_safe_swarm.py` to see the `Safety Officer` role in the CrewAI task definitions.
+
+---
+
 ## 1. Quick Mock Demo (No API Key Required)
 We've provided a `demo_swarm_mock.py` script that simulates the swarm's behavior. This is the fastest way to see the logic in action.
 
