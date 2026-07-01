@@ -1,7 +1,9 @@
 import os
+import sys
 import json
 import time
 import random
+from datetime import datetime
 from typing import List, Dict, Any, Optional
 from groq import Groq
 
@@ -92,14 +94,20 @@ class Swarm:
             "Tester": "Create comprehensive test cases and find bugs."
         }
 
-    def solve(self, prompt: str):
+    def solve(self, prompt: str, report_file: str = "swarm_report.md"):
         print(f"--- Processing Prompt: {prompt} ---")
+
+        report_content = f"# Swarm Intelligence Report\n\nGenerated on: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n"
+        report_content += f"## Prompt\n> {prompt}\n\n"
 
         # 1. Initial Safety Check
         if not self.safety.validate(prompt, "user_input"):
             print("❌ Input blocked by Safety Guard.")
+            report_content += "## Safety Status\n❌ **BLOCKED**: User input violated safety policies.\n"
+            self._write_report(report_file, report_content)
             return
 
+        report_content += "## Safety Status\n✅ **PASSED**: User input verified safe.\n\n"
         task_type = "general_coding" # Heuristic or classifier could be used here
 
         # 2. Path Selection (ACO)
@@ -136,19 +144,32 @@ class Swarm:
 
         # 4. Final Aggregation
         print("\n--- Final Swarm Conclusion ---")
+        report_content += "## Agent Results\n"
         if results:
+            for role, output in results.items():
+                report_content += f"### {role}\n{output}\n\n"
+
             summary = results.get("Architect", "") + "\n" + results.get("Coder", "")
             print(summary[:500] + "...")
         else:
+            report_content += "_No safe agent results were generated during this run._\n"
             print("No safe results generated.")
+
+        self._write_report(report_file, report_content)
+        print(f"\n📄 Report saved to: {report_file}")
 
         # Evaporate pheromones for the next run
         self.memory.evaporate()
+
+    def _write_report(self, filepath: str, content: str):
+        with open(filepath, "w", encoding="utf-8") as f:
+            f.write(content)
 
 if __name__ == "__main__":
     # For demonstration purposes, expect an API key from env
     key = os.environ.get("GROQ_API_KEY", "your_api_key_here")
     swarm = Swarm(key)
 
-    test_prompt = "Design and implement a simple task manager in Python."
+    # Use command line argument if available, else default
+    test_prompt = sys.argv[1] if len(sys.argv) > 1 else "Design and implement a simple task manager in Python."
     swarm.solve(test_prompt)

@@ -87,6 +87,21 @@ The standalone `ant_safe_swarm.py` script implements Ant Colony Optimization (AC
 **Integrated Safety Guardrails:**
 The swarm factory now includes a mandatory **Safety & Ethics Compliance Officer** (Agent #9). This agent performs a comprehensive final audit of all generated project files to ensure they are free of PII, security vulnerabilities, and harmful content. For per-interaction safety logic, refer to the `ant_safe_swarm.py` reference implementation.
 
+### 📊 Automation & Reporting
+
+**GitHub Actions Automation:**
+The project includes a `.github/workflows/swarm_automation.yml` workflow. You can:
+1. **Automate Runs:** Schedule the swarm to run daily or on specific triggers.
+2. **Manual Triggers:** Run the swarm via the GitHub "Actions" tab with custom prompts.
+3. **Download Reports:** Every automated run uploads a `swarm-report` artifact.
+
+**Local Reporting:**
+When running `ant_safe_swarm.py` locally, a `swarm_report.md` is automatically generated. This report includes:
+- The original user prompt.
+- Safety validation status.
+- Detailed outputs from each "ant" agent.
+- Performance summaries.
+
 Use the **Swarm Size** slider (2–9) to deploy a subset.
 
 ---
