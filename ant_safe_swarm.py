@@ -8,7 +8,7 @@ import random
 import gradio as gr
 from datetime import datetime
 from typing import List, Dict, Any, Optional
-from groq import Groq
+from unittest.mock import patch
 from crewai import Agent, Task, Crew, Process, LLM
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -235,8 +235,6 @@ def launch_gradio():
             brain = b.read()
 
         return report, logs, brain
-
-    from unittest.mock import patch
 
     with gr.Blocks(title="🐜 Ant-Safe Swarm UI") as demo:
         gr.Markdown("# 🐜 Ant-Safe Swarm Intelligence")

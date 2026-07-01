@@ -101,7 +101,7 @@ The project includes a `.github/workflows/swarm_automation.yml` workflow. You ca
 **Local Reporting & Web UI:**
 When running `ant_safe_swarm.py` locally, you have two modes:
 1. **CLI Mode:** Run `python ant_safe_swarm.py "your prompt"`. Generates a `swarm_report.md`.
-2. **Web UI Mode:** Run `python ant_safe_swarm.py --ui`. This launches a **Gradio** interface at `http://localhost:7860` where you can:
+2. **Web UI Mode:** Run `python ant_safe_swarm.py --ui`. This launches a **Gradio** interface at `http://localhost:3000` where you can:
    - Input prompts via a web form.
    - See the latest **Execution Report** in real-time.
    - View **Live Logs** (console output) from CrewAI.
