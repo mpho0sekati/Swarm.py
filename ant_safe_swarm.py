@@ -260,7 +260,7 @@ def launch_gradio():
 
         launch_btn.click(run_swarm, inputs=[prompt], outputs=[report_out, logs_out, brain_out])
 
-    demo.launch(server_name="0.0.0.0", server_port=7860)
+    demo.launch(server_name="0.0.0.0", server_port=3000)
 
 if __name__ == "__main__":
     if "--ui" in sys.argv:
