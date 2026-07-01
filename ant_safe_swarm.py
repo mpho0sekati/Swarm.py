@@ -1,9 +1,11 @@
 import os
 import sys
+import io
 import json
 import sqlite3
 import time
 import random
+import gradio as gr
 from datetime import datetime
 from typing import List, Dict, Any, Optional
 from groq import Groq
@@ -214,9 +216,57 @@ class AntSafeCrew:
         with open(filepath, "w", encoding="utf-8") as f:
             f.write(content)
 
-if __name__ == "__main__":
-    key = os.environ.get("GROQ_API_KEY", "your_api_key_here")
+def launch_gradio():
+    key = os.environ.get("GROQ_API_KEY", "")
     swarm = AntSafeCrew(key)
 
-    user_prompt = sys.argv[1] if len(sys.argv) > 1 else "Build a simple URL shortener API."
-    swarm.solve(user_prompt)
+    def run_swarm(prompt):
+        # Redirect stdout to capture CrewAI logs
+        f = io.StringIO()
+        with patch('sys.stdout', f):
+            swarm.solve(prompt, report_file="gradio_report.md")
+
+        logs = f.getvalue()
+
+        with open("gradio_report.md", "r") as r:
+            report = r.read()
+
+        with open("swarm_brain.md", "r") as b:
+            brain = b.read()
+
+        return report, logs, brain
+
+    from unittest.mock import patch
+
+    with gr.Blocks(title="🐜 Ant-Safe Swarm UI") as demo:
+        gr.Markdown("# 🐜 Ant-Safe Swarm Intelligence")
+        gr.Markdown("ACO-inspired multi-agent orchestration with CrewAI and AI Safety Guardrails.")
+
+        with gr.Row():
+            with gr.Column(scale=2):
+                prompt = gr.Textbox(label="Swarm Instructions", placeholder="e.g., Build a FastAPI app with JWT...", lines=5)
+                launch_btn = gr.Button("🚀 Launch Swarm", variant="primary")
+            with gr.Column(scale=1):
+                gr.Markdown("### 🧠 Swarm Brain Status")
+                gr.Info("Short-term (SQLite) and Long-term (Markdown) memory active.")
+
+        with gr.Tabs():
+            with gr.TabItem("📊 Execution Report"):
+                report_out = gr.Markdown(label="Latest Report")
+            with gr.TabItem("📜 Live Logs"):
+                logs_out = gr.Code(label="CrewAI Console Output", language="markdown")
+            with gr.TabItem("🧠 Brain History"):
+                brain_out = gr.Markdown(label="Memory History")
+
+        launch_btn.click(run_swarm, inputs=[prompt], outputs=[report_out, logs_out, brain_out])
+
+    demo.launch(server_name="0.0.0.0", server_port=7860)
+
+if __name__ == "__main__":
+    if "--ui" in sys.argv:
+        launch_gradio()
+    else:
+        key = os.environ.get("GROQ_API_KEY", "your_api_key_here")
+        swarm = AntSafeCrew(key)
+        user_prompt = sys.argv[1] if len(sys.argv) > 1 else "Build a simple URL shortener API."
+        swarm.solve(user_prompt)

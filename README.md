@@ -9,7 +9,7 @@
 ## 🚀 Quick Start
 
 ```bash
-pip install streamlit crewai groq litellm
+pip install streamlit crewai groq litellm gradio
 streamlit run Main.py
 ```
 
@@ -98,12 +98,14 @@ The project includes a `.github/workflows/swarm_automation.yml` workflow. You ca
 2. **Manual Triggers:** Run the swarm via the GitHub "Actions" tab with custom prompts.
 3. **Download Reports:** Every automated run uploads a `swarm-report` artifact.
 
-**Local Reporting:**
-When running `ant_safe_swarm.py` locally, a `swarm_report.md` is automatically generated. This report includes:
-- The original user prompt.
-- Safety validation status.
-- Detailed outputs from each "ant" agent.
-- Performance summaries.
+**Local Reporting & Web UI:**
+When running `ant_safe_swarm.py` locally, you have two modes:
+1. **CLI Mode:** Run `python ant_safe_swarm.py "your prompt"`. Generates a `swarm_report.md`.
+2. **Web UI Mode:** Run `python ant_safe_swarm.py --ui`. This launches a **Gradio** interface at `http://localhost:7860` where you can:
+   - Input prompts via a web form.
+   - See the latest **Execution Report** in real-time.
+   - View **Live Logs** (console output) from CrewAI.
+   - Browse the **Brain History** from the long-term memory.
 
 **The Swarm Brain:**
 The swarm now features a "Brain" that provides both short-term and long-term memory:
