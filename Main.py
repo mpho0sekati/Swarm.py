@@ -1030,7 +1030,7 @@ if launch and valid_keys and instructions.strip():
                     backstory=r["backstory"],
                     llm=llm,
                     verbose=False,
-                    allow_delegation=False,
+                    allow_delegation=(swarm_size >= 6),
                     max_iter=3,
                     max_retry_limit=2,
                 ))
@@ -1043,7 +1043,8 @@ if launch and valid_keys and instructions.strip():
             crew = Crew(
                 agents=agents,
                 tasks=tasks,
-                process=Process.sequential,
+                process=Process.hierarchical if swarm_size >= 6 else Process.sequential,
+                manager_llm=agents[0].llm if swarm_size >= 6 else None,
                 verbose=False,
                 output_log_file=str(project_path / "logs" / f"cycle_{cycle}.log"),
             )

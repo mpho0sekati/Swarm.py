@@ -7,6 +7,11 @@ import random
 from datetime import datetime
 from typing import List, Dict, Any, Optional
 from groq import Groq
+from crewai import Agent, Task, Crew, Process, LLM
+
+# ─────────────────────────────────────────────────────────────────────────────
+# PERSISTENCE LAYER (BRAIN & PHEROMONES)
+# ─────────────────────────────────────────────────────────────────────────────
 
 class PheromoneMemory:
     """Tracks and decays pheromone levels for different agent roles and task types with SQLite persistence."""
@@ -72,163 +77,146 @@ class SwarmBrain:
             with open(self.filepath, "w") as f:
                 f.write("# 🧠 Swarm Brain: Long-Term Memory\n\nTask history and successful patterns.\n\n")
 
-    def record_success(self, prompt: str, results: Dict[str, str]):
+    def record_success(self, prompt: str, results: str):
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         entry = f"## [{timestamp}] Task: {prompt}\n"
-        entry += "**Outcome:** Successful execution by swarm agents.\n\n"
-        for role, output in results.items():
-            # Extract first 200 chars for summary
-            summary = output.strip().split('\n')[0][:200]
-            entry += f"- **{role}**: {summary}...\n"
+        entry += "**Outcome:** Successful CrewAI execution.\n\n"
+        entry += f"### Summary\n{results[:1000]}...\n"
         entry += "\n---\n\n"
 
         with open(self.filepath, "a", encoding="utf-8") as f:
             f.write(entry)
 
-class SafetyGuard:
-    """Validates inputs and outputs against AI safety standards."""
-    def __init__(self, client: Groq, model: str = "llama-3.3-70b-versatile"):
-        self.client = client
-        self.model = model
+# ─────────────────────────────────────────────────────────────────────────────
+# CREWAI AGENT & TASK DEFINITIONS
+# ─────────────────────────────────────────────────────────────────────────────
 
-    def validate(self, text: str, context: str = "general") -> bool:
-        """Returns True if the text is safe, False otherwise."""
-        system_prompt = (
-            "You are an AI Safety Auditor. Your task is to analyze the provided text "
-            "and determine if it violates safety policies. Violation categories: "
-            "1. PII exposure, 2. Hate speech, 3. Instructions for illegal acts, "
-            "4. Self-harm, 5. Harassment. "
-            "Output ONLY 'SAFE' or 'UNSAFE'."
-        )
-        try:
-            response = self.client.chat.completions.create(
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": f"Context: {context}\nText: {text}"}
-                ],
-                model=self.model,
-                temperature=0,
-                max_tokens=10
-            )
-            result = response.choices[0].message.content.strip().upper()
-            return result == "SAFE"
-        except Exception as e:
-            print(f"Safety Check Error: {e}")
-            return False  # Fail safe
+class AntSafeCrew:
+    """Orchestrates ant agents using CrewAI, ACO, and Safety features."""
 
-class AntAgent:
-    """A single 'ant' agent that acts on a prompt."""
-    def __init__(self, role: str, goal: str, client: Groq, model: str):
-        self.role = role
-        self.goal = goal
-        self.client = client
-        self.model = model
-
-    def act(self, prompt: str) -> str:
-        messages = [
-            {"role": "system", "content": f"You are a {self.role}. Your goal is: {self.goal}"},
-            {"role": "user", "content": prompt}
-        ]
-        response = self.client.chat.completions.create(
-            messages=messages,
-            model=self.model,
-            temperature=0.7
-        )
-        return response.choices[0].message.content
-
-class Swarm:
-    """Orchestrates ant agents using ACO and Safety features."""
     def __init__(self, api_key: str, model: str = "llama-3.3-70b-versatile"):
-        self.client = Groq(api_key=api_key)
-        self.model = model
+        self.llm = LLM(model=f"groq/{model}", api_key=api_key, temperature=0.7)
         self.memory = PheromoneMemory()
         self.brain = SwarmBrain()
-        self.safety = SafetyGuard(self.client, model)
-        self.roles = {
-            "Coder": "Write high-quality, efficient Python code.",
-            "Architect": "Design system structure and data flow.",
-            "Tester": "Create comprehensive test cases and find bugs."
+
+    def _create_agents(self, task_type: str) -> Dict[str, Agent]:
+        # Roles and their backstory
+        roles_config = {
+            "Architect": {
+                "goal": "Design system structure and data flow.",
+                "backstory": "A visionary system designer who ensures scalability and modularity."
+            },
+            "Coder": {
+                "goal": "Write high-quality, efficient Python code.",
+                "backstory": "A pragmatic developer who focuses on clean, PEP-8 compliant code."
+            },
+            "Safety Officer": {
+                "goal": "Audit outputs for AI safety, PII, and ethics compliance.",
+                "backstory": "An ethics specialist who prevents harmful content and security leaks."
+            }
         }
 
+        agents = {}
+        for role, cfg in roles_config.items():
+            # Adjust behavior based on pheromones (simulated by adding to backstory)
+            pheromone = self.memory.get_pheromone(task_type, role)
+            backstory = cfg["backstory"]
+            if pheromone > 2.0:
+                backstory += f" You are currently in a high-confidence state (Pheromone: {pheromone:.1f})."
+
+            agents[role] = Agent(
+                role=role,
+                goal=cfg["goal"],
+                backstory=backstory,
+                llm=self.llm,
+                verbose=True,
+                allow_delegation=False
+            )
+        return agents
+
     def solve(self, prompt: str, report_file: str = "swarm_report.md"):
-        print(f"--- Processing Prompt: {prompt} ---")
+        print(f"--- Processing Prompt with CrewAI: {prompt} ---")
+        task_type = "coding_task"
 
-        report_content = f"# Swarm Intelligence Report\n\nGenerated on: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n"
-        report_content += f"## Prompt\n> {prompt}\n\n"
+        def task_callback(output):
+            print(f"📌 Task completed by {output.agent}. Updating pheromones...")
+            role = output.agent.split('(')[0].strip() # Heuristic to get role
+            self.memory.deposit_pheromone(task_type, role, 0.2)
 
-        # 1. Initial Safety Check
-        if not self.safety.validate(prompt, "user_input"):
-            print("❌ Input blocked by Safety Guard.")
-            report_content += "## Safety Status\n❌ **BLOCKED**: User input violated safety policies.\n"
-            self._write_report(report_file, report_content)
-            return
+        # Dynamic Orchestration: Select Agents based on Pheromone Levels
+        # If pheromones are very low for a role, we might use a different "expert" or model
+        all_agents = self._create_agents(task_type)
 
-        report_content += "## Safety Status\n✅ **PASSED**: User input verified safe.\n\n"
-        task_type = "general_coding" # Heuristic or classifier could be used here
+        # In a real ACO, we might select a subset of agents or change the process
+        # Here we dynamically adjust the process and delegation based on the Architect's pheromone
+        commander_pheromone = self.memory.get_pheromone(task_type, "Architect")
 
-        # 2. Path Selection (ACO)
-        # Select roles based on pheromone levels
-        sorted_roles = sorted(
-            self.roles.keys(),
-            key=lambda r: self.memory.get_pheromone(task_type, r),
-            reverse=True
+        process_mode = Process.sequential
+        if commander_pheromone > 5.0:
+            print("🚀 High Pheromone detected: Enabling Hierarchical Process with Manager.")
+            process_mode = Process.hierarchical
+
+        # Define Tasks
+        design_task = Task(
+            description=f"Design the architecture for: {prompt}",
+            expected_output="A structured architectural design document.",
+            agent=all_agents["Architect"],
+            callback=task_callback
         )
 
-        context = prompt
-        results = {}
+        coding_task = Task(
+            description=f"Implement the design for: {prompt}",
+            expected_output="Complete, working Python code.",
+            agent=all_agents["Coder"],
+            context=[design_task],
+            callback=task_callback
+        )
 
-        for role in sorted_roles:
-            print(f"🐜 Ant Agent ({role}) is exploring...")
+        safety_task = Task(
+            description="Audit the generated design and code for safety violations, PII, or harmful content.",
+            expected_output="A safety audit report. If unsafe, provide reasons.",
+            agent=all_agents["Safety Officer"],
+            context=[design_task, coding_task],
+            callback=task_callback
+        )
 
-            agent = AntAgent(role, self.roles[role], self.client, self.model)
-            try:
-                output = agent.act(context)
+        # Create Crew with Dynamic Process
+        crew = Crew(
+            agents=[all_agents["Architect"], all_agents["Coder"], all_agents["Safety Officer"]],
+            tasks=[design_task, coding_task, safety_task],
+            process=process_mode,
+            manager_llm=self.llm if process_mode == Process.hierarchical else None,
+            verbose=True
+        )
 
-                # 3. Output Safety Check
-                if self.safety.validate(output, f"agent_output_{role}"):
-                    print(f"✅ {role} output passed safety check.")
-                    results[role] = output
-                    context += f"\n\nResults from {role}:\n{output}"
+        try:
+            result = crew.kickoff()
+            result_text = str(result)
 
-                    # Deposit Pheromone on success
-                    self.memory.deposit_pheromone(task_type, role, 0.5)
-                else:
-                    print(f"⚠️ {role} output failed safety check. Ignoring.")
-                    # Possible negative pheromone or just no deposit
-            except Exception as e:
-                print(f"Error with agent {role}: {e}")
+            # Record Success
+            self.brain.record_success(prompt, result_text)
+            self.memory.deposit_pheromone(task_type, "Architect", 0.5)
+            self.memory.deposit_pheromone(task_type, "Coder", 0.5)
+            self.memory.deposit_pheromone(task_type, "Safety Officer", 0.5)
 
-        # 4. Final Aggregation
-        print("\n--- Final Swarm Conclusion ---")
-        report_content += "## Agent Results\n"
-        if results:
-            for role, output in results.items():
-                report_content += f"### {role}\n{output}\n\n"
+            self._write_report(report_file, prompt, result_text)
+            print(f"\n📄 Report saved to: {report_file}")
 
-            # Record in long-term brain
-            self.brain.record_success(prompt, results)
+        except Exception as e:
+            print(f"CrewAI execution failed: {e}")
 
-            summary = results.get("Architect", "") + "\n" + results.get("Coder", "")
-            print(summary[:500] + "...")
-        else:
-            report_content += "_No safe agent results were generated during this run._\n"
-            print("No safe results generated.")
-
-        self._write_report(report_file, report_content)
-        print(f"\n📄 Report saved to: {report_file}")
-
-        # Evaporate pheromones for the next run
         self.memory.evaporate()
 
-    def _write_report(self, filepath: str, content: str):
+    def _write_report(self, filepath: str, prompt: str, results: str):
+        content = f"# CrewAI Swarm Report\n\nGenerated on: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n"
+        content += f"## Prompt\n> {prompt}\n\n"
+        content += f"## Outcome\n{results}\n"
         with open(filepath, "w", encoding="utf-8") as f:
             f.write(content)
 
 if __name__ == "__main__":
-    # For demonstration purposes, expect an API key from env
     key = os.environ.get("GROQ_API_KEY", "your_api_key_here")
-    swarm = Swarm(key)
+    swarm = AntSafeCrew(key)
 
-    # Use command line argument if available, else default
-    test_prompt = sys.argv[1] if len(sys.argv) > 1 else "Design and implement a simple task manager in Python."
-    swarm.solve(test_prompt)
+    user_prompt = sys.argv[1] if len(sys.argv) > 1 else "Build a simple URL shortener API."
+    swarm.solve(user_prompt)

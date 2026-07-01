@@ -9,7 +9,7 @@
 ## 🚀 Quick Start
 
 ```bash
-pip install streamlit crewai groq
+pip install streamlit crewai groq litellm
 streamlit run Main.py
 ```
 
@@ -81,8 +81,11 @@ Tech: FastAPI, PostgreSQL, JWT auth, Streamlit dashboard.
 
 ### 🐜 ACO & Safety Features
 
-**Swarm Intelligence (ACO):**
-The standalone `ant_safe_swarm.py` script implements Ant Colony Optimization (ACO) principles. Agents ("ants") explore task solutions and leave "pheromone" trails (success weights) that influence future path selection, optimizing the swarm's performance over time.
+**Swarm Intelligence (ACO) with CrewAI:**
+The standalone `ant_safe_swarm.py` script now utilizes the **CrewAI** framework for sophisticated agent orchestration. It implements Ant Colony Optimization (ACO) principles where:
+- **Learning Backstories:** Pheromone levels (learning weights) directly influence agent backstories, increasing their "confidence" as they succeed.
+- **Dynamic Orchestration:** The swarm dynamically switches between `Sequential` and `Hierarchical` processes based on the architect's pheromone levels.
+- **Automated Feedback:** CrewAI `task_callbacks` are used to update pheromones in real-time as tasks are completed.
 
 **Integrated Safety Guardrails:**
 The swarm factory now includes a mandatory **Safety & Ethics Compliance Officer** (Agent #9). This agent performs a comprehensive final audit of all generated project files to ensure they are free of PII, security vulnerabilities, and harmful content. For per-interaction safety logic, refer to the `ant_safe_swarm.py` reference implementation.
