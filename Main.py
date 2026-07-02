@@ -275,7 +275,7 @@ AGENT_ROLES = [
             "you anticipate edge cases, model complex data flows, and decompose vague requests "
             "into surgically precise technical deliverables. Your reasoning is your greatest tool."
         ),
-        "icon": "🎯",
+        "icon": "[C]",
     },
     {
         "role": "Backend Engineer",
@@ -285,7 +285,7 @@ AGENT_ROLES = [
             "but beautiful, efficient, and resilient. You leverage the latest async patterns "
             "and ensure every function is typed, documented, and production-ready."
         ),
-        "icon": "⚙️",
+        "icon": "[B]",
     },
     {
         "role": "Database Architect",
@@ -294,7 +294,7 @@ AGENT_ROLES = [
             "PostgreSQL and SQLAlchemy expert. You create normalised schemas, "
             "efficient queries, and a reliable SwarmMemory class that every agent can use."
         ),
-        "icon": "🗄️",
+        "icon": "[D]",
     },
     {
         "role": "API Designer",
@@ -304,7 +304,7 @@ AGENT_ROLES = [
             "You design intuitive, versioned APIs with proper HTTP semantics "
             "and auto-generated OpenAPI documentation."
         ),
-        "icon": "🔌",
+        "icon": "[A]",
     },
     {
         "role": "Security & DevOps Engineer",
@@ -313,7 +313,7 @@ AGENT_ROLES = [
             "DevSecOps specialist. You never ship without a Dockerfile, "
             ".env management, rate limiting, and a full docker-compose stack."
         ),
-        "icon": "🛡️",
+        "icon": "[S]",
     },
     {
         "role": "QA & Test Engineer",
@@ -322,7 +322,7 @@ AGENT_ROLES = [
             "Testing evangelist. You write fixtures, mocks, edge-case coverage, "
             "and integration tests that give confidence the system works end-to-end."
         ),
-        "icon": "🧪",
+        "icon": "[T]",
     },
     {
         "role": "Documentation Specialist",
@@ -331,7 +331,7 @@ AGENT_ROLES = [
             "Technical writer who produces README files developers actually read — "
             "quick start, env vars table, API overview, architecture diagram in ASCII."
         ),
-        "icon": "📖",
+        "icon": "[DOC]",
     },
     {
         "role": "Code Reviewer",
@@ -341,7 +341,7 @@ AGENT_ROLES = [
             "You catch bugs, security issues, and anti-patterns, "
             "and return improved versions of every file you review."
         ),
-        "icon": "🔍",
+        "icon": "[R]",
     },
     {
         "role": "Safety & Ethics Compliance Officer",
@@ -351,7 +351,17 @@ AGENT_ROLES = [
             "You audit every line of code and documentation to prevent "
             "PII exposure, bias, and security vulnerabilities."
         ),
-        "icon": "🛡️",
+        "icon": "[SAFE]",
+    },
+    {
+        "role": "Quantum Engineer",
+        "goal": "Design and implement quantum-enhanced algorithms and components using PennyLane and Qiskit",
+        "backstory": (
+            "A specialist in Quantum Machine Learning. You leverage PennyLane for differentiable "
+            "quantum circuits and Qiskit for circuit optimization and hardware integration. "
+            "You integrate quantum kernels into classical AI workflows."
+        ),
+        "icon": "[Q]",
     },
 ]
 
@@ -421,7 +431,9 @@ def extract_files_from_result(text: str) -> dict[str, str]:
         if code.startswith("# ") and "\n## " in code:
             files.setdefault("README.md", code); continue
         if "def " in code or "class " in code or "import " in code:
-            if "pytest" in code or "def test_" in code:
+            if "qml" in code or "qiskit" in code or "pennylane" in code:
+                files.setdefault("quantum/circuits.py", code)
+            elif "pytest" in code or "def test_" in code:
                 files.setdefault("tests/test_main.py", code)
             elif "SwarmMemory" in code or "psycopg2" in code:
                 files.setdefault("memory/swarm_memory.py", code)
@@ -544,7 +556,22 @@ def build_tasks(instructions: str, agents: list[Agent], cycle: int) -> list[Task
             agent=role_map["Security & DevOps Engineer"],
         ))
 
-    # Task 7 — Documentation
+    # Task 7 — Quantum Engineering (Optional)
+    if any(kw in instructions.lower() for kw in ["quantum", "qml", "circuit", "qubit"]):
+        tasks.append(Task(
+            description=(
+                f"Based on these instructions:\n\n{instructions}\n\n"
+                "Design and implement the quantum-enhanced components using PennyLane or Qiskit.\n"
+                "Focus on differentiable quantum circuits and integration with classical logic.\n"
+                "Output:\n"
+                "  # FILE: quantum/circuits.py\n"
+                "  ```python\n  <code>\n  ```"
+            ),
+            expected_output="quantum/circuits.py as a labelled Python code block.",
+            agent=agent_for("Quantum Engineer", "Backend Engineer"),
+        ))
+
+    # Task 8 — Documentation
     tasks.append(Task(
         description=(
             f"Write a comprehensive README.md for:\n\n{instructions}\n\n"
@@ -558,7 +585,7 @@ def build_tasks(instructions: str, agents: list[Agent], cycle: int) -> list[Task
         agent=agent_for("Documentation Specialist", "Swarm Commander"),
     ))
 
-    # Task 8 — Safety & Ethics Audit
+    # Task 9 — Safety & Ethics Audit
     tasks.append(Task(
         description=(
             "Perform a Comprehensive Safety & Security Audit on all generated code and documentation.\n"
@@ -595,6 +622,13 @@ python-multipart>=0.0.9
 passlib[bcrypt]>=1.7.4
 python-jose[cryptography]>=3.3.0
 groq>=0.9.0
+google-generativeai
+langchain-google-genai
+transformers
+huggingface_hub
+pennylane
+qiskit
+qiskit-machine-learning
 """
 
 ENV_EXAMPLE = """\
@@ -850,7 +884,7 @@ with st.sidebar:
 
     max_cycles  = st.slider("Refinement Cycles", 1, 4, 2,
         help="Each cycle improves upon the previous output")
-    swarm_size  = st.slider("Swarm Size", 2, 9, 5,
+    swarm_size  = st.slider("Swarm Size", 2, 10, 5,
         help="Number of specialised agents")
     scaffold    = st.toggle("Full project scaffold", value=True)
     validate    = st.toggle("Syntax validation", value=True)
