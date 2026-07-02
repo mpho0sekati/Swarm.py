@@ -268,18 +268,31 @@ class AntSafeCrew:
 
     def _write_report(self, filepath: str, prompt: str, results: str):
         content = f"# CrewAI Swarm Report\n\nGenerated on: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n"
+        content += f"## Configuration\n"
+        content += f"- **Model:** {self.llm.model}\n"
+        content += f"- **Evaporation Rate:** {self.memory.evaporation_rate}\n\n"
         content += f"## Prompt\n> {prompt}\n\n"
         content += f"## Outcome\n{results}\n"
         with open(filepath, "w", encoding="utf-8") as f:
             f.write(content)
 
 def launch_gradio():
-    key = os.environ.get("GROQ_API_KEY", "")
-    swarm = AntSafeCrew(key)
+    GROQ_MODELS = [
+        "llama-3.3-70b-versatile",
+        "llama-3.1-70b-versatile",
+        "llama3-70b-8192",
+        "llama3-8b-8192",
+        "mixtral-8x7b-32768",
+        "gemma2-9b-it"
+    ]
 
-    def run_swarm(prompt):
+    key = os.environ.get("GROQ_API_KEY", "")
+
+    def run_swarm(prompt, model):
         if not os.environ.get("GROQ_API_KEY"):
             return "### ❌ Error\nGroq API Key not found. Please set the `GROQ_API_KEY` environment variable before launching.", "API Key Missing", ""
+
+        swarm = AntSafeCrew(os.environ.get("GROQ_API_KEY"), model=model)
 
         # Redirect stdout to capture CrewAI logs
         f = io.StringIO()
@@ -296,16 +309,31 @@ def launch_gradio():
 
         return report, logs, brain
 
-    with gr.Blocks(title="🐜 Ant-Safe Swarm UI") as demo:
+    with gr.Blocks(title="🐜 Ant-Safe Swarm UI", theme=gr.themes.Soft()) as demo:
         gr.Markdown("# 🐜 Ant-Safe Swarm Intelligence")
-        gr.Markdown("ACO-inspired multi-agent orchestration with CrewAI and AI Safety Guardrails.")
+        gr.Markdown("### ACO-inspired multi-agent orchestration with CrewAI and AI Safety Guardrails.")
 
         with gr.Row():
             with gr.Column(scale=2):
                 prompt = gr.Textbox(label="Swarm Instructions", placeholder="e.g., Build a FastAPI app with JWT...", lines=5)
+                with gr.Row():
+                    model_dropdown = gr.Dropdown(
+                        choices=GROQ_MODELS,
+                        value="llama-3.3-70b-versatile",
+                        label="Select Groq Model",
+                        info="Llama-3.3-70b is recommended for complex reasoning."
+                    )
                 launch_btn = gr.Button("🚀 Launch Swarm", variant="primary")
             with gr.Column(scale=1):
-                gr.Markdown("### 🧠 Swarm Brain Status")
+                gr.Markdown("### 🧠 Swarm Status")
+                status_box = gr.Label(value="Ready", label="Current State")
+                with gr.Accordion("Model Details", open=False):
+                    gr.Markdown("""
+                    - **Llama 3.3 70B:** State-of-the-art reasoning.
+                    - **Llama 3.1 70B:** Reliable balanced model.
+                    - **Mixtral 8x7b:** High context window.
+                    - **Gemma 2 9b:** Fast and efficient.
+                    """)
                 gr.Info("Short-term (SQLite) and Long-term (Markdown) memory active.")
 
         with gr.Tabs():
@@ -317,7 +345,17 @@ def launch_gradio():
             with gr.TabItem("🧠 Brain History"):
                 brain_out = gr.Markdown(label="Memory History")
 
-        launch_btn.click(run_swarm, inputs=[prompt], outputs=[report_out, logs_out, brain_out])
+        launch_btn.click(
+            fn=lambda: "Processing...",
+            outputs=status_box
+        ).then(
+            run_swarm,
+            inputs=[prompt, model_dropdown],
+            outputs=[report_out, logs_out, brain_out]
+        ).then(
+            fn=lambda: "Task Complete",
+            outputs=status_box
+        )
 
     demo.launch(server_name="0.0.0.0", server_port=3000)
 
