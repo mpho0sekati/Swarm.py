@@ -31,9 +31,13 @@ The setup script will:
 You will need a **Groq API Key**. You can get one for free at [console.groq.com](https://console.groq.com).
 
 - **For the Scaffold Factory (`Main.py`)**: You will enter your keys directly in the sidebar of the web app.
-- **For the Standalone Swarm (`ant_safe_swarm.py`)**: Set your key as an environment variable:
+- **For the Standalone Swarm (`ant_safe_swarm.py`)**: Set your key as an environment variable. The swarm supports both Groq and Google Gemini:
   ```bash
+  # For Groq
   export GROQ_API_KEY=your_gsk_key_here
+
+  # For Google Gemini
+  export GEMINI_API_KEY=your_google_ai_key_here
   ```
 
 ---

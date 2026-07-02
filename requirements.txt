@@ -2,6 +2,8 @@ streamlit
 crewai
 crewai_tools
 groq
+google-generativeai
+langchain-google-genai
 litellm
 gradio
 pydantic

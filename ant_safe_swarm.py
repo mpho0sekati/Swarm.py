@@ -10,6 +10,10 @@ from datetime import datetime
 from typing import List, Dict, Any, Optional
 from unittest.mock import patch
 from crewai import Agent, Task, Crew, Process, LLM
+try:
+    from langchain_google_genai import ChatGoogleGenerativeAI
+except ImportError:
+    ChatGoogleGenerativeAI = None
 from crewai_tools import FileReadTool, FileWriterTool, DirectoryReadTool
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -97,8 +101,12 @@ class SwarmBrain:
 class AntSafeCrew:
     """Orchestrates ant agents using CrewAI, ACO, and Safety features."""
 
-    def __init__(self, api_key: str, model: str = "llama-3.3-70b-versatile"):
-        self.llm = LLM(model=f"groq/{model}", api_key=api_key, temperature=0.7)
+    def __init__(self, api_key: str, model: str = "llama-3.3-70b-versatile", provider: str = "groq"):
+        if provider == "google":
+            # CrewAI LLM uses litellm, which expects 'gemini/' prefix for Google models
+            self.llm = LLM(model=f"gemini/{model}", api_key=api_key, temperature=0.7)
+        else:
+            self.llm = LLM(model=f"groq/{model}", api_key=api_key, temperature=0.7)
         self.memory = PheromoneMemory()
         self.brain = SwarmBrain()
 
@@ -302,13 +310,19 @@ def launch_gradio():
         "gemma2-9b-it"
     ]
 
-    key = os.environ.get("GROQ_API_KEY", "")
+    GEMINI_MODELS = [
+        "gemini-2.0-flash",
+        "gemini-1.5-flash",
+        "gemini-1.5-pro"
+    ]
 
-    def run_swarm(prompt, model):
-        if not os.environ.get("GROQ_API_KEY"):
-            return "### Error\nGroq API Key not found. Please set the `GROQ_API_KEY` environment variable before launching.", "API Key Missing", ""
+    def run_swarm(prompt, provider, model):
+        api_key = os.environ.get("GROQ_API_KEY") if provider == "Groq" else os.environ.get("GEMINI_API_KEY")
 
-        swarm = AntSafeCrew(os.environ.get("GROQ_API_KEY"), model=model)
+        if not api_key:
+            return f"### Error\n{provider} API Key not found. Please set the environment variable before launching.", "API Key Missing", ""
+
+        swarm = AntSafeCrew(api_key, model=model, provider=provider.lower())
 
         # Redirect stdout to capture CrewAI logs
         f = io.StringIO()
@@ -337,12 +351,22 @@ def launch_gradio():
             with gr.Column(scale=2):
                 prompt = gr.Textbox(label="Swarm Instructions", placeholder="e.g., Build a FastAPI app with JWT...", lines=5)
                 with gr.Row():
+                    provider_radio = gr.Radio(choices=["Groq", "Google"], value="Groq", label="AI Provider")
                     model_dropdown = gr.Dropdown(
                         choices=GROQ_MODELS,
                         value="llama-3.3-70b-versatile",
-                        label="Select Groq Model",
-                        info="Llama-3.3-70b is recommended for complex reasoning."
+                        label="Select Model",
+                        info="Choose your preferred model."
                     )
+
+                def update_models(provider):
+                    if provider == "Groq":
+                        return gr.update(choices=GROQ_MODELS, value="llama-3.3-70b-versatile")
+                    else:
+                        return gr.update(choices=GEMINI_MODELS, value="gemini-2.0-flash")
+
+                provider_radio.change(update_models, inputs=[provider_radio], outputs=[model_dropdown])
+
                 launch_btn = gr.Button("Launch Swarm", variant="primary")
             with gr.Column(scale=1):
                 gr.Markdown("### Swarm Status")
@@ -370,7 +394,7 @@ def launch_gradio():
             outputs=status_box
         ).then(
             run_swarm,
-            inputs=[prompt, model_dropdown],
+            inputs=[prompt, provider_radio, model_dropdown],
             outputs=[report_out, logs_out, brain_out]
         ).then(
             fn=lambda: "Task Complete",
