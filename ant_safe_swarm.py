@@ -278,6 +278,9 @@ def launch_gradio():
     swarm = AntSafeCrew(key)
 
     def run_swarm(prompt):
+        if not os.environ.get("GROQ_API_KEY"):
+            return "### ❌ Error\nGroq API Key not found. Please set the `GROQ_API_KEY` environment variable before launching.", "API Key Missing", ""
+
         # Redirect stdout to capture CrewAI logs
         f = io.StringIO()
         with patch('sys.stdout', f):

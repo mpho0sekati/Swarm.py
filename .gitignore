@@ -1,0 +1,13 @@
+__pycache__/
+*.py[cod]
+.env
+pheromones.db
+swarm_brain.md
+swarm_report.md
+gradio_report.md
+gradio_output.log
+output/
+swarm_*/
+.pytest_cache/
+*.zip
+*.log
