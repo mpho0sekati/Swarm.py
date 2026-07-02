@@ -12,6 +12,9 @@ run-factory: ## Launch the Streamlit Project Factory
 demo: ## Run the offline mock demo to see the logic in action
 	@python demo_swarm_mock.py
 
+build: ## Build a new AI project (Usage: make build PROMPT="your prompt" [DIR="out"])
+	@python ant_safe_swarm.py "$(PROMPT)" --dir $(or $(DIR),output)
+
 clean: ## Remove temporary files, pycache, and logs
 	@find . -type d -name "__pycache__" -exec rm -rf {} +
 	@rm -f *.log gradio_report.md swarm_report.md

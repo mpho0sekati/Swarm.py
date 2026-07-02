@@ -21,6 +21,7 @@ make setup
 | **Interactive UI** | `make run-ui` |
 | **Project Factory** | `make run-factory` |
 | **Mock Demo (No Key)** | `make demo` |
+| **Build new AI** | `make build PROMPT="..."` |
 | **Clean Project** | `make clean` |
 
 1. Add your Groq API keys in the sidebar (as many as you have)

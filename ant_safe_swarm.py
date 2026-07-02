@@ -129,6 +129,11 @@ class AntSafeCrew:
                 "goal": "Perform deep reasoning and chain-of-thought analysis on the user prompt.",
                 "backstory": "A strategic thinker who breaks down complex instructions into actionable steps and identifies potential pitfalls before execution.",
                 "tools": [dir_read]
+            },
+            "AI Specialist": {
+                "goal": "Design AI-specific components including model selection, prompt templates, and data pipelines.",
+                "backstory": "An AI R&D expert who stays current with the latest LLM patterns, RAG techniques, and agentic workflows.",
+                "tools": [file_read]
             }
         }
 
@@ -151,9 +156,16 @@ class AntSafeCrew:
             )
         return agents
 
-    def solve(self, prompt: str, report_file: str = "swarm_report.md"):
+    def solve(self, prompt: str, report_file: str = "swarm_report.md", output_dir: Optional[str] = None):
         print(f"--- Processing Prompt with CrewAI: {prompt} ---")
-        task_type = "coding_task"
+
+        # Heuristic to detect AI-building tasks
+        is_ai_task = any(kw in prompt.lower() for kw in ["ai", "llm", "rag", "agent", "model"])
+        task_type = "ai_development" if is_ai_task else "coding_task"
+
+        if output_dir:
+            os.makedirs(output_dir, exist_ok=True)
+            print(f"📁 Output directory set to: {output_dir}")
 
         def task_callback(output):
             print(f"📌 Task completed by {output.agent}. Updating pheromones...")
@@ -181,17 +193,31 @@ class AntSafeCrew:
             callback=task_callback
         )
 
+        # AI specific task if needed
+        ai_task = None
+        if is_ai_task:
+            ai_task = Task(
+                description=f"Research and design the AI-specific components for: {prompt}. Focus on model choice and prompting.",
+                expected_output="AI Implementation strategy and prompt templates.",
+                agent=all_agents["AI Specialist"],
+                context=[reasoning_task],
+                callback=task_callback
+            )
+
         design_task = Task(
             description=f"Design the architecture based on the strategist's breakdown for: {prompt}",
             expected_output="A structured architectural design document.",
             agent=all_agents["Architect"],
-            context=[reasoning_task],
+            context=[reasoning_task, ai_task] if ai_task else [reasoning_task],
             callback=task_callback
         )
 
         coding_task = Task(
-            description=f"Implement the design for: {prompt}",
-            expected_output="Complete, working Python code.",
+            description=(
+                f"Implement the design for: {prompt}. "
+                f"SAVE all code files into the directory: {output_dir if output_dir else './output'}."
+            ),
+            expected_output="Complete, working Python code saved to the output directory.",
             agent=all_agents["Coder"],
             context=[design_task],
             callback=task_callback
@@ -205,10 +231,18 @@ class AntSafeCrew:
             callback=task_callback
         )
 
+        # Agents and Tasks for the Crew
+        agents_list = [all_agents["Strategist"], all_agents["Architect"], all_agents["Coder"], all_agents["Safety Officer"]]
+        tasks_list = [reasoning_task, design_task, coding_task, safety_task]
+
+        if ai_task:
+            agents_list.insert(1, all_agents["AI Specialist"])
+            tasks_list.insert(1, ai_task)
+
         # Create Crew with Dynamic Process
         crew = Crew(
-            agents=[all_agents["Strategist"], all_agents["Architect"], all_agents["Coder"], all_agents["Safety Officer"]],
-            tasks=[reasoning_task, design_task, coding_task, safety_task],
+            agents=agents_list,
+            tasks=tasks_list,
             process=process_mode,
             manager_llm=self.llm if process_mode == Process.hierarchical else None,
             verbose=True
@@ -290,5 +324,15 @@ if __name__ == "__main__":
     else:
         key = os.environ.get("GROQ_API_KEY", "your_api_key_here")
         swarm = AntSafeCrew(key)
-        user_prompt = sys.argv[1] if len(sys.argv) > 1 else "Build a simple URL shortener API."
-        swarm.solve(user_prompt)
+
+        # Parse args
+        user_prompt = "Build a simple URL shortener API."
+        out_dir = None
+
+        for i, arg in enumerate(sys.argv):
+            if arg == "--dir" and i + 1 < len(sys.argv):
+                out_dir = sys.argv[i+1]
+            elif not arg.startswith("--") and i > 0:
+                user_prompt = arg
+
+        swarm.solve(user_prompt, output_dir=out_dir)
