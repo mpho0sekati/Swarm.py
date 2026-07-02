@@ -262,7 +262,9 @@ class AntSafeCrew:
             print(f"\nReport saved to: {report_file}")
 
         except Exception as e:
-            print(f"CrewAI execution failed: {e}")
+            error_msg = str(e)
+            print(f"CrewAI execution failed: {error_msg}")
+            self._write_failure_report(report_file, prompt, error_msg)
 
         self.memory.evaporate()
 
@@ -275,6 +277,20 @@ class AntSafeCrew:
         content += f"## Outcome\n{results}\n"
         with open(filepath, "w", encoding="utf-8") as f:
             f.write(content)
+
+    def _write_failure_report(self, filepath: str, prompt: str, error: str):
+        fail_path = filepath.replace(".md", "_failure.md")
+        content = f"# CrewAI Swarm FAILURE Report\n\nGenerated on: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n"
+        content += f"## Configuration\n"
+        content += f"- **Model:** {self.llm.model}\n"
+        content += f"- **Status:** FAILED\n\n"
+        content += f"## Prompt\n> {prompt}\n\n"
+        content += f"## Error Message\n```\n{error}\n```\n"
+        content += "\n### Troubleshooting\n- Check your API key and quota.\n- Ensure all agent dependencies are met.\n- Review live logs for tool execution errors.\n"
+
+        with open(fail_path, "w", encoding="utf-8") as f:
+            f.write(content)
+        print(f"Failure report saved to: {fail_path}")
 
 def launch_gradio():
     GROQ_MODELS = [
@@ -301,7 +317,11 @@ def launch_gradio():
 
         logs = f.getvalue()
 
-        with open("gradio_report.md", "r") as r:
+        report_file = "gradio_report.md"
+        if "CrewAI execution failed" in logs:
+            report_file = "gradio_report_failure.md"
+
+        with open(report_file, "r") as r:
             report = r.read()
 
         with open("swarm_brain.md", "r") as b:
