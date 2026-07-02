@@ -2,16 +2,57 @@
 
 **Multi-key Groq · Instruction-driven · Auto rate-limit rotation · Full project scaffold**
 
-> Write your instructions. Add your Groq keys. Hit launch. Get a deployable project.
+This repository contains two primary tools:
+1. **The Scaffold Factory (`Main.py`)**: A Streamlit app that generates full-stack project structures from high-level instructions.
+2. **Ant-Safe Swarm Intelligence (`ant_safe_swarm.py`)**: A standalone reference implementation of a persistent, self-learning agent swarm using CrewAI and Ant Colony Optimization (ACO) principles.
 
 ---
 
-## 🚀 Quick Start
+## 🚀 Setup & Installation
+
+### 1. Installation
+The easiest way to get started is using the provided `Makefile`:
 
 ```bash
-pip install streamlit crewai groq
-streamlit run Main.py
+# Clone the repository and enter the directory
+# git clone <repo_url>
+# cd <repo_name>
+
+# Run the automated setup script
+make setup
 ```
+
+The setup script will:
+- Check for Python 3.10+
+- Install all dependencies from `requirements.txt`
+- Initialize local memory files (`swarm_brain.md`)
+
+### 2. Configuration
+You will need a **Groq API Key**. You can get one for free at [console.groq.com](https://console.groq.com).
+
+- **For the Scaffold Factory (`Main.py`)**: You will enter your keys directly in the sidebar of the web app.
+- **For the Standalone Swarm (`ant_safe_swarm.py`)**: Set your key as an environment variable. The swarm supports both Groq and Google Gemini:
+  ```bash
+  # For Groq
+  export GROQ_API_KEY=your_gsk_key_here
+
+  # For Google Gemini
+  export GEMINI_API_KEY=your_google_ai_key_here
+
+  # For Hugging Face
+  export HUGGINGFACE_API_KEY=your_hf_token_here
+  ```
+
+---
+
+## 🛠️ Usage
+| Tool | Command |
+|------|---------|
+| **Interactive UI** | `make run-ui` |
+| **Project Factory** | `make run-factory` |
+| **Mock Demo (No Key)** | `make demo` |
+| **Build new AI** | `make build PROMPT="..."` |
+| **Clean Project** | `make clean` |
 
 1. Add your Groq API keys in the sidebar (as many as you have)
 2. Select your model (`llama-3.3-70b-versatile` recommended)
@@ -77,8 +118,43 @@ Tech: FastAPI, PostgreSQL, JWT auth, Streamlit dashboard.
 | 🧪 | QA & Test Engineer | pytest suites, fixtures, integration tests |
 | 📖 | Documentation | README, docstrings, setup guides |
 | 🔍 | Code Reviewer | Quality review, bug detection, security check |
+| 🛡️ | Safety Officer | Comprehensive safety & ethics compliance audit |
+| ⚛️ | Quantum Engineer | Design and implement QML using PennyLane & Qiskit |
 
-Use the **Swarm Size** slider (2–8) to deploy a subset.
+### 🐜 ACO & Safety Features
+
+**Swarm Intelligence (ACO) with CrewAI:**
+The standalone `ant_safe_swarm.py` script now utilizes the **CrewAI** framework for sophisticated agent orchestration. It implements Ant Colony Optimization (ACO) principles where:
+- **Learning Backstories:** Pheromone levels (learning weights) directly influence agent backstories, increasing their "confidence" as they succeed.
+- **Dynamic Orchestration:** The swarm dynamically switches between `Sequential` and `Hierarchical` processes based on the architect's pheromone levels.
+- **Automated Feedback:** CrewAI `task_callbacks` are used to update pheromones in real-time as tasks are completed.
+
+**Integrated Safety Guardrails:**
+The swarm factory now includes a mandatory **Safety & Ethics Compliance Officer** (Agent #9). This agent performs a comprehensive final audit of all generated project files to ensure they are free of PII, security vulnerabilities, and harmful content. For per-interaction safety logic, refer to the `ant_safe_swarm.py` reference implementation.
+
+### 📊 Automation & Reporting
+
+**GitHub Actions Automation:**
+The project includes a `.github/workflows/swarm_automation.yml` workflow. You can:
+1. **Automate Runs:** Schedule the swarm to run daily or on specific triggers.
+2. **Manual Triggers:** Run the swarm via the GitHub "Actions" tab with custom prompts.
+3. **Download Reports:** Every automated run uploads a `swarm-report` artifact.
+
+**Local Reporting & Web UI:**
+When running `ant_safe_swarm.py` locally, you have two modes:
+1. **CLI Mode:** Run `python ant_safe_swarm.py "your prompt"`. Generates a `swarm_report.md`.
+2. **Web UI Mode:** Run `python ant_safe_swarm.py --ui`. This launches a **Gradio** interface at `http://localhost:3000` where you can:
+   - Input prompts via a web form.
+   - See the latest **Execution Report** in real-time.
+   - View **Live Logs** (console output) from CrewAI.
+   - Browse the **Brain History** from the long-term memory.
+
+**The Swarm Brain:**
+The swarm now features a "Brain" that provides both short-term and long-term memory:
+- **Short-Term (SQLite):** Pheromone levels (learning weights) are persisted in `pheromones.db`. This allows the swarm to remember which agent roles performed best for specific task types across different runs.
+- **Long-Term (Markdown):** Successful task completions are recorded in `swarm_brain.md`. This provides a human-readable history of the swarm's accomplishments and successful patterns.
+
+Use the **Swarm Size** slider (2–9) to deploy a subset.
 
 ---
 

@@ -35,8 +35,8 @@ logging.basicConfig(level=logging.WARNING)
 # PAGE CONFIG
 # ─────────────────────────────────────────────────────────────────────────────
 st.set_page_config(
-    page_title="🌑 Dark Swarm · Groq Edition",
-    page_icon="🌑",
+    page_title="Dark Swarm - Groq Edition",
+    page_icon="O",
     layout="wide",
     initial_sidebar_state="expanded",
 )
@@ -269,23 +269,23 @@ class GroqKeyPool:
 AGENT_ROLES = [
     {
         "role": "Swarm Commander",
-        "goal": "Parse user instructions, plan the architecture, and orchestrate the team",
+        "goal": "Execute a deep chain-of-thought analysis of instructions and orchestrate the swarm for peak efficiency",
         "backstory": (
-            "A battle-hardened software architect who has shipped production systems globally. "
-            "You read instructions carefully, break them into clear deliverables, "
-            "and ensure every agent produces what was actually asked for."
+            "A master strategist and Hermes-class architect. You don't just follow instructions; "
+            "you anticipate edge cases, model complex data flows, and decompose vague requests "
+            "into surgically precise technical deliverables. Your reasoning is your greatest tool."
         ),
-        "icon": "🎯",
+        "icon": "[C]",
     },
     {
         "role": "Backend Engineer",
-        "goal": "Implement the core application logic exactly as instructed",
+        "goal": "Implement high-performance, secure, and idiomatic application logic",
         "backstory": (
-            "Senior Python engineer specialising in FastAPI and async code. "
-            "You produce clean, typed, production-grade code that does precisely "
-            "what the instructions specify — no more, no less."
+            "A world-class software engineer. You write Python code that is not only functional "
+            "but beautiful, efficient, and resilient. You leverage the latest async patterns "
+            "and ensure every function is typed, documented, and production-ready."
         ),
-        "icon": "⚙️",
+        "icon": "[B]",
     },
     {
         "role": "Database Architect",
@@ -294,7 +294,7 @@ AGENT_ROLES = [
             "PostgreSQL and SQLAlchemy expert. You create normalised schemas, "
             "efficient queries, and a reliable SwarmMemory class that every agent can use."
         ),
-        "icon": "🗄️",
+        "icon": "[D]",
     },
     {
         "role": "API Designer",
@@ -304,7 +304,7 @@ AGENT_ROLES = [
             "You design intuitive, versioned APIs with proper HTTP semantics "
             "and auto-generated OpenAPI documentation."
         ),
-        "icon": "🔌",
+        "icon": "[A]",
     },
     {
         "role": "Security & DevOps Engineer",
@@ -313,7 +313,7 @@ AGENT_ROLES = [
             "DevSecOps specialist. You never ship without a Dockerfile, "
             ".env management, rate limiting, and a full docker-compose stack."
         ),
-        "icon": "🛡️",
+        "icon": "[S]",
     },
     {
         "role": "QA & Test Engineer",
@@ -322,7 +322,7 @@ AGENT_ROLES = [
             "Testing evangelist. You write fixtures, mocks, edge-case coverage, "
             "and integration tests that give confidence the system works end-to-end."
         ),
-        "icon": "🧪",
+        "icon": "[T]",
     },
     {
         "role": "Documentation Specialist",
@@ -331,7 +331,7 @@ AGENT_ROLES = [
             "Technical writer who produces README files developers actually read — "
             "quick start, env vars table, API overview, architecture diagram in ASCII."
         ),
-        "icon": "📖",
+        "icon": "[DOC]",
     },
     {
         "role": "Code Reviewer",
@@ -341,7 +341,27 @@ AGENT_ROLES = [
             "You catch bugs, security issues, and anti-patterns, "
             "and return improved versions of every file you review."
         ),
-        "icon": "🔍",
+        "icon": "[R]",
+    },
+    {
+        "role": "Safety & Ethics Compliance Officer",
+        "goal": "Ensure all generated content and code strictly adhere to AI safety and ethics standards",
+        "backstory": (
+            "A specialist in AI safety, ethics, and legal compliance. "
+            "You audit every line of code and documentation to prevent "
+            "PII exposure, bias, and security vulnerabilities."
+        ),
+        "icon": "[SAFE]",
+    },
+    {
+        "role": "Quantum Engineer",
+        "goal": "Design and implement quantum-enhanced algorithms and components using PennyLane and Qiskit",
+        "backstory": (
+            "A specialist in Quantum Machine Learning. You leverage PennyLane for differentiable "
+            "quantum circuits and Qiskit for circuit optimization and hardware integration. "
+            "You integrate quantum kernels into classical AI workflows."
+        ),
+        "icon": "[Q]",
     },
 ]
 
@@ -411,7 +431,9 @@ def extract_files_from_result(text: str) -> dict[str, str]:
         if code.startswith("# ") and "\n## " in code:
             files.setdefault("README.md", code); continue
         if "def " in code or "class " in code or "import " in code:
-            if "pytest" in code or "def test_" in code:
+            if "qml" in code or "qiskit" in code or "pennylane" in code:
+                files.setdefault("quantum/circuits.py", code)
+            elif "pytest" in code or "def test_" in code:
                 files.setdefault("tests/test_main.py", code)
             elif "SwarmMemory" in code or "psycopg2" in code:
                 files.setdefault("memory/swarm_memory.py", code)
@@ -534,7 +556,22 @@ def build_tasks(instructions: str, agents: list[Agent], cycle: int) -> list[Task
             agent=role_map["Security & DevOps Engineer"],
         ))
 
-    # Task 7 — Documentation
+    # Task 7 — Quantum Engineering (Optional)
+    if any(kw in instructions.lower() for kw in ["quantum", "qml", "circuit", "qubit"]):
+        tasks.append(Task(
+            description=(
+                f"Based on these instructions:\n\n{instructions}\n\n"
+                "Design and implement the quantum-enhanced components using PennyLane or Qiskit.\n"
+                "Focus on differentiable quantum circuits and integration with classical logic.\n"
+                "Output:\n"
+                "  # FILE: quantum/circuits.py\n"
+                "  ```python\n  <code>\n  ```"
+            ),
+            expected_output="quantum/circuits.py as a labelled Python code block.",
+            agent=agent_for("Quantum Engineer", "Backend Engineer"),
+        ))
+
+    # Task 8 — Documentation
     tasks.append(Task(
         description=(
             f"Write a comprehensive README.md for:\n\n{instructions}\n\n"
@@ -546,6 +583,20 @@ def build_tasks(instructions: str, agents: list[Agent], cycle: int) -> list[Task
         ),
         expected_output="README.md as a labelled markdown block.",
         agent=agent_for("Documentation Specialist", "Swarm Commander"),
+    ))
+
+    # Task 9 — Safety & Ethics Audit
+    tasks.append(Task(
+        description=(
+            "Perform a Comprehensive Safety & Security Audit on all generated code and documentation.\n"
+            "Check for: PII leaks, insecure dependencies, hardcoded secrets, and biased language.\n"
+            "Provide a final safety report as a new file: safety_audit.md.\n"
+            "Output:\n"
+            "  # FILE: safety_audit.md\n"
+            "  ```markdown\n  <audit report>\n  ```"
+        ),
+        expected_output="safety_audit.md as a labelled markdown block.",
+        agent=agent_for("Safety & Ethics Compliance Officer", "Code Reviewer"),
     ))
 
     return tasks
@@ -571,6 +622,13 @@ python-multipart>=0.0.9
 passlib[bcrypt]>=1.7.4
 python-jose[cryptography]>=3.3.0
 groq>=0.9.0
+google-generativeai
+langchain-google-genai
+transformers
+huggingface_hub
+pennylane
+qiskit
+qiskit-machine-learning
 """
 
 ENV_EXAMPLE = """\
@@ -779,7 +837,7 @@ if "groq_keys" not in st.session_state:
 # SIDEBAR
 # ─────────────────────────────────────────────────────────────────────────────
 with st.sidebar:
-    st.markdown("<div style='font-family:JetBrains Mono,monospace; font-size:16px; color:#4ade80; margin-bottom:12px;'>⚙ Groq Configuration</div>", unsafe_allow_html=True)
+    st.markdown("<div style='font-family:JetBrains Mono,monospace; font-size:16px; color:#4ade80; margin-bottom:12px;'>[Config] Groq Configuration</div>", unsafe_allow_html=True)
 
     # Model selection
     selected_model = st.selectbox("Model", GROQ_MODELS, index=0,
@@ -826,7 +884,7 @@ with st.sidebar:
 
     max_cycles  = st.slider("Refinement Cycles", 1, 4, 2,
         help="Each cycle improves upon the previous output")
-    swarm_size  = st.slider("Swarm Size", 2, 8, 5,
+    swarm_size  = st.slider("Swarm Size", 2, 10, 5,
         help="Number of specialised agents")
     scaffold    = st.toggle("Full project scaffold", value=True)
     validate    = st.toggle("Syntax validation", value=True)
@@ -841,14 +899,14 @@ with st.sidebar:
             unsafe_allow_html=True
         )
 
-# ─────────────────────────────────────────────────────────────────────────────
+# -----------------------------------------------------------------------------
 # MAIN PANEL
-# ─────────────────────────────────────────────────────────────────────────────
-st.markdown("<div class='swarm-header'>🌑 Dark Swarm Factory</div>", unsafe_allow_html=True)
-st.markdown("<div class='swarm-sub'>groq multi-key · auto rate-limit rotation · instruction-driven</div>", unsafe_allow_html=True)
+# -----------------------------------------------------------------------------
+st.markdown("<div class='swarm-header'>Dark Swarm Factory</div>", unsafe_allow_html=True)
+st.markdown("<div class='swarm-sub'>groq multi-key - auto rate-limit rotation - instruction-driven</div>", unsafe_allow_html=True)
 
-# ── Instruction input ──────────────────────────────────────────────────────
-st.markdown("### 📋 Your Instructions")
+# -- Instruction input ------------------------------------------------------
+st.markdown("### [Instructions] Your Instructions")
 st.markdown(
     "<div style='font-size:12px; color:#555; margin-bottom:8px;'>"
     "Tell the swarm exactly what to build. Be specific: describe the domain, features, data models, "
@@ -885,10 +943,10 @@ instructions = st.text_area(
 # ── Action buttons ──────────────────────────────────────────────────────────
 c1, c2, c3 = st.columns([3, 1, 1])
 with c1:
-    launch = st.button("🚀  Launch Swarm", type="primary", use_container_width=True,
+    launch = st.button("Launch Swarm", type="primary", use_container_width=True,
         disabled=(not valid_keys or not instructions.strip()))
 with c2:
-    clear_btn = st.button("🗑  Clear", use_container_width=True)
+    clear_btn = st.button("Clear", use_container_width=True)
 with c3:
     st.markdown(
         f"<div style='text-align:center; font-size:11px; color:#444; padding:8px 0;'>"
@@ -988,8 +1046,8 @@ if launch and valid_keys and instructions.strip():
         best_outputs: list[str] = []
 
         for cycle in range(1, max_cycles + 1):
-            status_ph.info(f"⟳ Cycle {cycle}/{max_cycles} — running swarm…")
-            log("ok", f"━━━ Cycle {cycle}/{max_cycles} ━━━")
+            status_ph.info(f"Cycle {cycle}/{max_cycles} - running swarm...")
+            log("ok", f"--- Cycle {cycle}/{max_cycles} ---")
 
             # Build agents — each gets its own LLM/key slot
             agents: list[Agent] = []
@@ -1006,7 +1064,7 @@ if launch and valid_keys and instructions.strip():
                     backstory=r["backstory"],
                     llm=llm,
                     verbose=False,
-                    allow_delegation=False,
+                    allow_delegation=(swarm_size >= 6),
                     max_iter=3,
                     max_retry_limit=2,
                 ))
@@ -1019,7 +1077,8 @@ if launch and valid_keys and instructions.strip():
             crew = Crew(
                 agents=agents,
                 tasks=tasks,
-                process=Process.sequential,
+                process=Process.hierarchical if swarm_size >= 6 else Process.sequential,
+                manager_llm=agents[0].llm if swarm_size >= 6 else None,
                 verbose=False,
                 output_log_file=str(project_path / "logs" / f"cycle_{cycle}.log"),
             )
@@ -1112,11 +1171,11 @@ if launch and valid_keys and instructions.strip():
             for fp in all_written:
                 if fp.is_file():
                     rel = str(fp.relative_to(project_path))
-                    ico = "🐍" if rel.endswith(".py") else "📄"
-                    ai_tag = " ✨" if rel in all_files else ""
+                    ico = "[PY]" if rel.endswith(".py") else "[FILE]"
+                    ai_tag = " [AI]" if rel in all_files else ""
                     vt = ""
                     if rel in val_results:
-                        vt = " ✅" if val_results[rel][0] else " ⚠️"
+                        vt = " [OK]" if val_results[rel][0] else " [WARN]"
                     st.markdown(
                         f"<span style='font-family:JetBrains Mono,monospace; font-size:12px;'>"
                         f"{ico} {rel}{ai_tag}{vt}</span>",
@@ -1156,11 +1215,11 @@ if launch and valid_keys and instructions.strip():
 
         # ── Done ──────────────────────────────────────────────────────────
         status_ph.success(
-            f"✅ Swarm complete · {len(all_files)} AI files · {zip_kb} KB"
+            f"Swarm complete - {len(all_files)} AI files - {zip_kb} KB"
         )
         st.divider()
         st.download_button(
-            label=f"📥  Download {project_name}.zip  ({zip_kb} KB)",
+            label=f"Download {project_name}.zip ({zip_kb} KB)",
             data=open(zip_path, "rb").read(),
             file_name=zip_path,
             mime="application/zip",
@@ -1181,6 +1240,6 @@ st.divider()
 st.markdown(
     "<p style='text-align:center; font-family:JetBrains Mono,monospace; "
     "font-size:11px; color:#333;'>"
-    "🌑 Dark Swarm Factory · Groq Edition · MIT © mpho sekati</p>",
+    "Dark Swarm Factory - Groq Edition - MIT (c) mpho sekati</p>",
     unsafe_allow_html=True,
 )

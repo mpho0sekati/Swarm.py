@@ -1,0 +1,15 @@
+streamlit
+crewai
+crewai_tools
+groq
+google-generativeai
+langchain-google-genai
+litellm
+gradio
+pydantic
+python-dotenv
+transformers
+huggingface_hub
+pennylane
+qiskit
+qiskit-machine-learning
