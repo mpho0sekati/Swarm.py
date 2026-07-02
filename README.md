@@ -8,14 +8,37 @@ This repository contains two primary tools:
 
 ---
 
-## 🚀 Quick Start
+## 🚀 Setup & Installation
 
-**One-Command Setup:**
+### 1. Installation
+The easiest way to get started is using the provided `Makefile`:
+
 ```bash
+# Clone the repository and enter the directory
+# git clone <repo_url>
+# cd <repo_name>
+
+# Run the automated setup script
 make setup
 ```
 
-**Launch Tools:**
+The setup script will:
+- Check for Python 3.10+
+- Install all dependencies from `requirements.txt`
+- Initialize local memory files (`swarm_brain.md`)
+
+### 2. Configuration
+You will need a **Groq API Key**. You can get one for free at [console.groq.com](https://console.groq.com).
+
+- **For the Scaffold Factory (`Main.py`)**: You will enter your keys directly in the sidebar of the web app.
+- **For the Standalone Swarm (`ant_safe_swarm.py`)**: Set your key as an environment variable:
+  ```bash
+  export GROQ_API_KEY=your_gsk_key_here
+  ```
+
+---
+
+## 🛠️ Usage
 | Tool | Command |
 |------|---------|
 | **Interactive UI** | `make run-ui` |
