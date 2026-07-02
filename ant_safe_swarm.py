@@ -121,6 +121,11 @@ class AntSafeCrew:
 
         # Roles and their backstory
         roles_config = {
+            "Quantum Engineer": {
+                "goal": "Design and implement quantum-enhanced components using PennyLane and Qiskit.",
+                "backstory": "A specialist in Quantum Machine Learning. You leverage PennyLane for differentiable quantum circuits and Qiskit for circuit optimization and hardware integration.",
+                "tools": [file_read]
+            },
             "Architect": {
                 "goal": "Design system structure and data flow. Research existing files if needed.",
                 "backstory": "A visionary system designer who ensures scalability and modularity. You can read the current codebase to understand the context.",
@@ -242,6 +247,17 @@ class AntSafeCrew:
             callback=task_callback
         )
 
+        # Quantum specific task
+        quantum_task = None
+        if any(kw in prompt.lower() for kw in ["quantum", "qml", "circuit", "qubit"]):
+            quantum_task = Task(
+                description=f"Design and implement quantum-enhanced algorithms or circuits for: {prompt}. Use PennyLane or Qiskit.",
+                expected_output="Python code implementing quantum circuits or QML models.",
+                agent=all_agents["Quantum Engineer"],
+                context=[reasoning_task],
+                callback=task_callback
+            )
+
         # Agents and Tasks for the Crew
         agents_list = [all_agents["Strategist"], all_agents["Architect"], all_agents["Coder"], all_agents["Safety Officer"]]
         tasks_list = [reasoning_task, design_task, coding_task, safety_task]
@@ -249,6 +265,12 @@ class AntSafeCrew:
         if ai_task:
             agents_list.insert(1, all_agents["AI Specialist"])
             tasks_list.insert(1, ai_task)
+
+        if quantum_task:
+            agents_list.insert(1, all_agents["Quantum Engineer"])
+            tasks_list.insert(1, quantum_task)
+            # Link coding task to quantum output
+            coding_task.context.append(quantum_task)
 
         # Create Crew with Dynamic Process
         crew = Crew(

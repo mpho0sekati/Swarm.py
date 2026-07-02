@@ -10,3 +10,6 @@ pydantic
 python-dotenv
 transformers
 huggingface_hub
+pennylane
+qiskit
+qiskit-machine-learning

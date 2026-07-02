@@ -119,6 +119,7 @@ Tech: FastAPI, PostgreSQL, JWT auth, Streamlit dashboard.
 | 📖 | Documentation | README, docstrings, setup guides |
 | 🔍 | Code Reviewer | Quality review, bug detection, security check |
 | 🛡️ | Safety Officer | Comprehensive safety & ethics compliance audit |
+| ⚛️ | Quantum Engineer | Design and implement QML using PennyLane & Qiskit |
 
 ### 🐜 ACO & Safety Features
 
