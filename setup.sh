@@ -15,8 +15,13 @@ then
 fi
 
 # 2. Install dependencies
-echo "📦 Installing required packages..."
-pip install streamlit crewai crewai_tools groq litellm gradio sqlite3-binary 2>/dev/null || pip install streamlit crewai crewai_tools groq litellm gradio
+echo "📦 Installing required packages from requirements.txt..."
+if [ -f requirements.txt ]; then
+    pip install -r requirements.txt
+else
+    echo "⚠️ requirements.txt not found, falling back to manual install..."
+    pip install streamlit crewai crewai_tools groq litellm gradio sqlite3-binary 2>/dev/null || pip install streamlit crewai crewai_tools groq litellm gradio
+fi
 
 # 3. Create initial data files if they don't exist
 touch swarm_brain.md
