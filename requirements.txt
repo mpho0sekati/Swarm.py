@@ -8,3 +8,5 @@ litellm
 gradio
 pydantic
 python-dotenv
+transformers
+huggingface_hub

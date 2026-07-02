@@ -105,6 +105,9 @@ class AntSafeCrew:
         if provider == "google":
             # CrewAI LLM uses litellm, which expects 'gemini/' prefix for Google models
             self.llm = LLM(model=f"gemini/{model}", api_key=api_key, temperature=0.7)
+        elif provider == "huggingface":
+            # LiteLLM supports huggingface models with 'huggingface/' prefix
+            self.llm = LLM(model=f"huggingface/{model}", api_key=api_key, temperature=0.7)
         else:
             self.llm = LLM(model=f"groq/{model}", api_key=api_key, temperature=0.7)
         self.memory = PheromoneMemory()
@@ -316,8 +319,19 @@ def launch_gradio():
         "gemini-1.5-pro"
     ]
 
+    HF_MODELS = [
+        "meta-llama/Llama-3.2-3B-Instruct",
+        "mistralai/Mistral-7B-Instruct-v0.3",
+        "HuggingFaceH4/zephyr-7b-beta"
+    ]
+
     def run_swarm(prompt, provider, model):
-        api_key = os.environ.get("GROQ_API_KEY") if provider == "Groq" else os.environ.get("GEMINI_API_KEY")
+        if provider == "Groq":
+            api_key = os.environ.get("GROQ_API_KEY")
+        elif provider == "Google":
+            api_key = os.environ.get("GEMINI_API_KEY")
+        else:
+            api_key = os.environ.get("HUGGINGFACE_API_KEY")
 
         if not api_key:
             return f"### Error\n{provider} API Key not found. Please set the environment variable before launching.", "API Key Missing", ""
@@ -351,7 +365,7 @@ def launch_gradio():
             with gr.Column(scale=2):
                 prompt = gr.Textbox(label="Swarm Instructions", placeholder="e.g., Build a FastAPI app with JWT...", lines=5)
                 with gr.Row():
-                    provider_radio = gr.Radio(choices=["Groq", "Google"], value="Groq", label="AI Provider")
+                    provider_radio = gr.Radio(choices=["Groq", "Google", "HuggingFace"], value="Groq", label="AI Provider")
                     model_dropdown = gr.Dropdown(
                         choices=GROQ_MODELS,
                         value="llama-3.3-70b-versatile",
@@ -362,8 +376,10 @@ def launch_gradio():
                 def update_models(provider):
                     if provider == "Groq":
                         return gr.update(choices=GROQ_MODELS, value="llama-3.3-70b-versatile")
-                    else:
+                    elif provider == "Google":
                         return gr.update(choices=GEMINI_MODELS, value="gemini-2.0-flash")
+                    else:
+                        return gr.update(choices=HF_MODELS, value="meta-llama/Llama-3.2-3B-Instruct")
 
                 provider_radio.change(update_models, inputs=[provider_radio], outputs=[model_dropdown])
 
@@ -373,10 +389,10 @@ def launch_gradio():
                 status_box = gr.Label(value="Ready", label="Current State")
                 with gr.Accordion("Model Details", open=False):
                     gr.Markdown("""
-                    - **Llama 3.3 70B:** State-of-the-art reasoning.
-                    - **Llama 3.1 70B:** Reliable balanced model.
-                    - **Mixtral 8x7b:** High context window.
-                    - **Gemma 2 9b:** Fast and efficient.
+                    - **Llama 3.3 70B (Groq):** State-of-the-art reasoning.
+                    - **Gemini 2.0 Flash (Google):** Balanced speed and smarts.
+                    - **Llama 3.2 3B (HF):** Lightweight and fast.
+                    - **Mistral 7B (HF):** Excellent instruction following.
                     """)
                 gr.Info("Short-term (SQLite) and Long-term (Markdown) memory active.")
 

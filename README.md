@@ -38,6 +38,9 @@ You will need a **Groq API Key**. You can get one for free at [console.groq.com]
 
   # For Google Gemini
   export GEMINI_API_KEY=your_google_ai_key_here
+
+  # For Hugging Face
+  export HUGGINGFACE_API_KEY=your_hf_token_here
   ```
 
 ---
