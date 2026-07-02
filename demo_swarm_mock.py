@@ -5,7 +5,7 @@ from datetime import datetime
 from ant_safe_swarm import PheromoneMemory, SwarmBrain
 
 def run_manual_mock_demo():
-    print("🚀 Initializing Ant-Safe Swarm Manual Mock Demo...")
+    print("[Init] Initializing Ant-Safe Swarm Manual Mock Demo...")
 
     # 1. Initialize Memory
     memory = PheromoneMemory(db_path="pheromones.db")
@@ -29,7 +29,7 @@ def run_manual_mock_demo():
         # Simulate Pheromone Deposits
         task_type = "coding_task"
         for role in ["Architect", "Coder", "Safety Officer"]:
-            print(f"📌 {role} completed task. Depositing pheromone...")
+            print(f"[Task] {role} completed task. Depositing pheromone...")
             memory.deposit_pheromone(task_type, role, 0.5)
 
         # Simulate Brain Recording
@@ -41,18 +41,18 @@ def run_manual_mock_demo():
 
         # Check for high pheromone logic trigger
         if memory.get_pheromone(task_type, "Architect") > 2.0:
-            print("🚀 High Pheromone detected! Swarm intelligence evolving...")
+            print("[Evolution] High Pheromone detected! Swarm intelligence evolving...")
 
-    print("\n✅ Manual Mock Demo Complete!")
+    print("\n[Done] Manual Mock Demo Complete!")
     print("-" * 30)
 
     # Show Brain Status
-    print("\n🧠 Swarm Brain (Long-Term Memory) Updated:")
+    print("\n[Brain] Swarm Brain (Long-Term Memory) Updated:")
     with open("swarm_brain.md", "r") as f:
         print(f.read())
 
     # Show Pheromone Status
-    print("\n🧪 Pheromone (Short-Term Memory) Status:")
+    print("\n[Pheromone] Pheromone (Short-Term Memory) Status:")
     conn = sqlite3.connect("pheromones.db")
     cursor = conn.execute("SELECT role, level FROM pheromones ORDER BY level DESC")
     for row in cursor:

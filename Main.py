@@ -35,8 +35,8 @@ logging.basicConfig(level=logging.WARNING)
 # PAGE CONFIG
 # ─────────────────────────────────────────────────────────────────────────────
 st.set_page_config(
-    page_title="🌑 Dark Swarm · Groq Edition",
-    page_icon="🌑",
+    page_title="Dark Swarm - Groq Edition",
+    page_icon="O",
     layout="wide",
     initial_sidebar_state="expanded",
 )
@@ -803,7 +803,7 @@ if "groq_keys" not in st.session_state:
 # SIDEBAR
 # ─────────────────────────────────────────────────────────────────────────────
 with st.sidebar:
-    st.markdown("<div style='font-family:JetBrains Mono,monospace; font-size:16px; color:#4ade80; margin-bottom:12px;'>⚙ Groq Configuration</div>", unsafe_allow_html=True)
+    st.markdown("<div style='font-family:JetBrains Mono,monospace; font-size:16px; color:#4ade80; margin-bottom:12px;'>[Config] Groq Configuration</div>", unsafe_allow_html=True)
 
     # Model selection
     selected_model = st.selectbox("Model", GROQ_MODELS, index=0,
@@ -865,14 +865,14 @@ with st.sidebar:
             unsafe_allow_html=True
         )
 
-# ─────────────────────────────────────────────────────────────────────────────
+# -----------------------------------------------------------------------------
 # MAIN PANEL
-# ─────────────────────────────────────────────────────────────────────────────
-st.markdown("<div class='swarm-header'>🌑 Dark Swarm Factory</div>", unsafe_allow_html=True)
-st.markdown("<div class='swarm-sub'>groq multi-key · auto rate-limit rotation · instruction-driven</div>", unsafe_allow_html=True)
+# -----------------------------------------------------------------------------
+st.markdown("<div class='swarm-header'>Dark Swarm Factory</div>", unsafe_allow_html=True)
+st.markdown("<div class='swarm-sub'>groq multi-key - auto rate-limit rotation - instruction-driven</div>", unsafe_allow_html=True)
 
-# ── Instruction input ──────────────────────────────────────────────────────
-st.markdown("### 📋 Your Instructions")
+# -- Instruction input ------------------------------------------------------
+st.markdown("### [Instructions] Your Instructions")
 st.markdown(
     "<div style='font-size:12px; color:#555; margin-bottom:8px;'>"
     "Tell the swarm exactly what to build. Be specific: describe the domain, features, data models, "
@@ -909,10 +909,10 @@ instructions = st.text_area(
 # ── Action buttons ──────────────────────────────────────────────────────────
 c1, c2, c3 = st.columns([3, 1, 1])
 with c1:
-    launch = st.button("🚀  Launch Swarm", type="primary", use_container_width=True,
+    launch = st.button("Launch Swarm", type="primary", use_container_width=True,
         disabled=(not valid_keys or not instructions.strip()))
 with c2:
-    clear_btn = st.button("🗑  Clear", use_container_width=True)
+    clear_btn = st.button("Clear", use_container_width=True)
 with c3:
     st.markdown(
         f"<div style='text-align:center; font-size:11px; color:#444; padding:8px 0;'>"
@@ -1012,8 +1012,8 @@ if launch and valid_keys and instructions.strip():
         best_outputs: list[str] = []
 
         for cycle in range(1, max_cycles + 1):
-            status_ph.info(f"⟳ Cycle {cycle}/{max_cycles} — running swarm…")
-            log("ok", f"━━━ Cycle {cycle}/{max_cycles} ━━━")
+            status_ph.info(f"Cycle {cycle}/{max_cycles} - running swarm...")
+            log("ok", f"--- Cycle {cycle}/{max_cycles} ---")
 
             # Build agents — each gets its own LLM/key slot
             agents: list[Agent] = []
@@ -1137,11 +1137,11 @@ if launch and valid_keys and instructions.strip():
             for fp in all_written:
                 if fp.is_file():
                     rel = str(fp.relative_to(project_path))
-                    ico = "🐍" if rel.endswith(".py") else "📄"
-                    ai_tag = " ✨" if rel in all_files else ""
+                    ico = "[PY]" if rel.endswith(".py") else "[FILE]"
+                    ai_tag = " [AI]" if rel in all_files else ""
                     vt = ""
                     if rel in val_results:
-                        vt = " ✅" if val_results[rel][0] else " ⚠️"
+                        vt = " [OK]" if val_results[rel][0] else " [WARN]"
                     st.markdown(
                         f"<span style='font-family:JetBrains Mono,monospace; font-size:12px;'>"
                         f"{ico} {rel}{ai_tag}{vt}</span>",
@@ -1181,11 +1181,11 @@ if launch and valid_keys and instructions.strip():
 
         # ── Done ──────────────────────────────────────────────────────────
         status_ph.success(
-            f"✅ Swarm complete · {len(all_files)} AI files · {zip_kb} KB"
+            f"Swarm complete - {len(all_files)} AI files - {zip_kb} KB"
         )
         st.divider()
         st.download_button(
-            label=f"📥  Download {project_name}.zip  ({zip_kb} KB)",
+            label=f"Download {project_name}.zip ({zip_kb} KB)",
             data=open(zip_path, "rb").read(),
             file_name=zip_path,
             mime="application/zip",
@@ -1206,6 +1206,6 @@ st.divider()
 st.markdown(
     "<p style='text-align:center; font-family:JetBrains Mono,monospace; "
     "font-size:11px; color:#333;'>"
-    "🌑 Dark Swarm Factory · Groq Edition · MIT © mpho sekati</p>",
+    "Dark Swarm Factory - Groq Edition - MIT (c) mpho sekati</p>",
     unsafe_allow_html=True,
 )

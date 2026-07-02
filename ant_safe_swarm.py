@@ -78,7 +78,7 @@ class SwarmBrain:
         self.filepath = filepath
         if not os.path.exists(self.filepath):
             with open(self.filepath, "w") as f:
-                f.write("# 🧠 Swarm Brain: Long-Term Memory\n\nTask history and successful patterns.\n\n")
+                f.write("# Swarm Brain: Long-Term Memory\n\nTask history and successful patterns.\n\n")
 
     def record_success(self, prompt: str, results: str):
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -165,10 +165,10 @@ class AntSafeCrew:
 
         if output_dir:
             os.makedirs(output_dir, exist_ok=True)
-            print(f"📁 Output directory set to: {output_dir}")
+            print(f"Output directory set to: {output_dir}")
 
         def task_callback(output):
-            print(f"📌 Task completed by {output.agent}. Updating pheromones...")
+            print(f"[Task] completed by {output.agent}. Updating pheromones...")
             role = output.agent.split('(')[0].strip() # Heuristic to get role
             self.memory.deposit_pheromone(task_type, role, 0.2)
 
@@ -182,7 +182,7 @@ class AntSafeCrew:
 
         process_mode = Process.sequential
         if commander_pheromone > 5.0:
-            print("🚀 High Pheromone detected: Enabling Hierarchical Process with Manager.")
+            print("High Pheromone detected: Enabling Hierarchical Process with Manager.")
             process_mode = Process.hierarchical
 
         # Define Tasks
@@ -259,7 +259,7 @@ class AntSafeCrew:
             self.memory.deposit_pheromone(task_type, "Safety Officer", 0.5)
 
             self._write_report(report_file, prompt, result_text)
-            print(f"\n📄 Report saved to: {report_file}")
+            print(f"\nReport saved to: {report_file}")
 
         except Exception as e:
             print(f"CrewAI execution failed: {e}")
@@ -290,7 +290,7 @@ def launch_gradio():
 
     def run_swarm(prompt, model):
         if not os.environ.get("GROQ_API_KEY"):
-            return "### ❌ Error\nGroq API Key not found. Please set the `GROQ_API_KEY` environment variable before launching.", "API Key Missing", ""
+            return "### Error\nGroq API Key not found. Please set the `GROQ_API_KEY` environment variable before launching.", "API Key Missing", ""
 
         swarm = AntSafeCrew(os.environ.get("GROQ_API_KEY"), model=model)
 
@@ -309,8 +309,8 @@ def launch_gradio():
 
         return report, logs, brain
 
-    with gr.Blocks(title="🐜 Ant-Safe Swarm UI", theme=gr.themes.Soft()) as demo:
-        gr.Markdown("# 🐜 Ant-Safe Swarm Intelligence")
+    with gr.Blocks(title="Ant-Safe Swarm UI", theme=gr.themes.Soft()) as demo:
+        gr.Markdown("# Ant-Safe Swarm Intelligence")
         gr.Markdown("### ACO-inspired multi-agent orchestration with CrewAI and AI Safety Guardrails.")
 
         with gr.Row():
@@ -323,9 +323,9 @@ def launch_gradio():
                         label="Select Groq Model",
                         info="Llama-3.3-70b is recommended for complex reasoning."
                     )
-                launch_btn = gr.Button("🚀 Launch Swarm", variant="primary")
+                launch_btn = gr.Button("Launch Swarm", variant="primary")
             with gr.Column(scale=1):
-                gr.Markdown("### 🧠 Swarm Status")
+                gr.Markdown("### Swarm Status")
                 status_box = gr.Label(value="Ready", label="Current State")
                 with gr.Accordion("Model Details", open=False):
                     gr.Markdown("""
@@ -337,12 +337,12 @@ def launch_gradio():
                 gr.Info("Short-term (SQLite) and Long-term (Markdown) memory active.")
 
         with gr.Tabs():
-            with gr.TabItem("📊 Execution Report"):
+            with gr.TabItem("Execution Report"):
                 report_out = gr.Markdown(label="Latest Report")
-            with gr.TabItem("📜 Live Logs"):
+            with gr.TabItem("Live Logs"):
                 gr.Markdown("### Agent Reasoning & Tool Usage")
                 logs_out = gr.Code(label="CrewAI Console Output", language="markdown", lines=20)
-            with gr.TabItem("🧠 Brain History"):
+            with gr.TabItem("Brain History"):
                 brain_out = gr.Markdown(label="Memory History")
 
         launch_btn.click(
