@@ -15,6 +15,8 @@ streamlit run Main.py
 
 ## ☁️ Hosting on Render
 
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy)
+
 You can easily host this factory on [Render](https://render.com):
 
 1. **New Web Service**: Connect your GitHub repository.
