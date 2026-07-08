@@ -1,0 +1,10 @@
+fastapi
+uvicorn
+crewai
+crewai-tools
+litellm
+pydantic
+python-dotenv
+websockets
+python-multipart
+groq
