@@ -23,6 +23,9 @@ You can easily host this factory on [Render](https://render.com):
 4. **Start Command**: `streamlit run Main.py --server.port $PORT`
 5. **Environment Variables**: Render will automatically provide the `PORT`. You can optionally pre-set `GROQ_API_KEY` if you want a default key.
 
+### 🚀 One-Click Blueprint
+This repository includes a `render.yaml` file. You can use Render's **Blueprints** feature to automatically deploy the app with the correct configuration.
+
 1. Add your Groq API keys in the sidebar (as many as you have)
 2. Select your model (`llama-3.3-70b-versatile` recommended)
 3. Type detailed instructions in the main panel
