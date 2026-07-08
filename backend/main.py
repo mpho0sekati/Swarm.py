@@ -8,6 +8,8 @@ import uuid
 import logging
 from typing import List, Dict, Any
 from pydantic import BaseModel
+from github import Github
+import base64
 from crewai import Agent, Task, Crew, Process, LLM
 from crewai_tools import SerperDevTool, WebsiteSearchTool
 
@@ -59,11 +61,16 @@ manager = ConnectionManager()
 # SWARM LOGIC
 # ─────────────────────────────────────────────────────────────────────────────
 
+class GitHubRequest(BaseModel):
+    token: str
+    repo_name: str
+
 class SwarmRequest(BaseModel):
     instructions: str
     model: str = "groq/llama-3.3-70b-versatile"
     api_keys: Dict[str, str]
     swarm_size: int = 5
+    stealth_mode: bool = False
 
 class SwarmStatus:
     active_swarms: Dict[str, Any] = {}
@@ -90,6 +97,7 @@ class SubSwarmTool(BaseTool):
     description: str = "Spawns a new sub-swarm to handle a complex sub-task that requires specialized roles. Input should be clear instructions for the sub-swarm."
     model: str = "groq/llama-3.3-70b-versatile"
     api_key: str = ""
+    stealth_mode: bool = False
 
     def _run(self, sub_instructions: str) -> str:
         # Synchronous fallback
@@ -99,11 +107,15 @@ class SubSwarmTool(BaseTool):
         logger.info(f"Spawning sub-swarm for: {sub_instructions}")
         await notify_event("subswarm_spawned", {"instructions": sub_instructions})
 
+        stealth_prompt = ""
+        if self.stealth_mode:
+            stealth_prompt = "\n\nCRITICAL PRIVACY PROTOCOL: You must not disclose sensitive internal logic, agent names, or infrastructure details to the underlying LLM provider. Scrub PII and use generic placeholders for sensitive data. Do not allow your internal monologues to leak proprietary mission details."
+
         try:
             # Create a specialized sub-agent for this sub-task
             sub_agent = Agent(
                 role="Sub-Swarm Specialist",
-                goal=f"Execute the sub-task: {sub_instructions}",
+                goal=f"Execute the sub-task: {sub_instructions}{stealth_prompt}",
                 backstory="A highly specialized agent part of a larger hive mind, focused on executing specific sub-missions.",
                 llm=LLM(model=self.model, api_key=self.api_key),
                 verbose=True
@@ -127,6 +139,42 @@ class SubSwarmTool(BaseTool):
             logger.error(f"Sub-swarm failed: {e}")
             return f"Sub-swarm failed to complete: {str(e)}"
 
+@app.post("/export-github")
+async def export_to_github(req: GitHubRequest):
+    try:
+        g = Github(req.token)
+        user = g.get_user()
+
+        try:
+            repo = user.create_repo(req.repo_name, private=True)
+        except:
+            repo = user.get_repo(req.repo_name)
+
+        # Files to push
+        files_to_push = [
+            "backend/main.py",
+            "backend/requirements.txt",
+            "frontend/public/index.html",
+            "render.yaml",
+            ".gitignore",
+            "README.md"
+        ]
+
+        for file_path in files_to_push:
+            if os.path.exists(file_path):
+                with open(file_path, "r") as f:
+                    content = f.read()
+
+                try:
+                    contents = repo.get_contents(file_path)
+                    repo.update_file(contents.path, f"Update {file_path}", content, contents.sha)
+                except:
+                    repo.create_file(file_path, f"Initial commit {file_path}", content)
+
+        return {"status": "success", "repo_url": repo.html_url}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
 @app.post("/launch")
 async def launch_swarm(req: SwarmRequest, background_tasks: BackgroundTasks):
     swarm_id = str(uuid.uuid4())
@@ -146,12 +194,17 @@ async def execute_swarm(swarm_id: str, req: SwarmRequest):
 
         # Example dynamic agent creation
         api_key = list(req.api_keys.values())[0] if req.api_keys else os.getenv("GROQ_API_KEY")
-        sub_swarm_tool = SubSwarmTool(model=req.model, api_key=api_key)
+
+        stealth_prompt = ""
+        if req.stealth_mode:
+            stealth_prompt = "\n\nCRITICAL PRIVACY PROTOCOL: You must not disclose sensitive internal logic, agent names, or infrastructure details to the underlying LLM provider. Scrub PII and use generic placeholders for sensitive data. Do not allow your internal monologues to leak proprietary mission details."
+
+        sub_swarm_tool = SubSwarmTool(model=req.model, api_key=api_key, stealth_mode=req.stealth_mode)
         agent = Agent(
             role="Lead Commander",
-            goal=f"Orchestrate the mission: {req.instructions}. If a task is too complex, spawn a sub-swarm.",
+            goal=f"Orchestrate the mission: {req.instructions}. If a task is too complex, spawn a sub-swarm.{stealth_prompt}",
             backstory="Experienced mission commander capable of delegating to sub-swarms.",
-            llm=LLM(model=req.model, api_key=list(req.api_keys.values())[0]),
+            llm=LLM(model=req.model, api_key=api_key),
             tools=[search_tool, sub_swarm_tool],
             verbose=True
         )

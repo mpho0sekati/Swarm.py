@@ -1,143 +1,36 @@
-# 🌑 Dark Swarm Factory — Groq Edition
+# 🌑 DARK SWARM: Autonomous Hive Intelligence
 
-**Multi-key Groq · Instruction-driven · Auto rate-limit rotation · Full project scaffold**
+A multi-agent orchestration platform designed for recursive swarm operations with real-time visualization and stealth privacy protocols.
 
-> Write your instructions. Add your Groq keys. Hit launch. Get a deployable project.
+## 🚀 Features
+- **FastAPI Backend:** High-performance async orchestration.
+- **Live Hive Feed:** HTML5 Canvas visualization of agent activity.
+- **Sub-Swarm Tool:** Agents can spawn secondary swarms for complex task delegation.
+- **Stealth Mode:** Injects privacy protocols to prevent data leakage to LLM providers.
+- **One-Click Persistence:** Export your swarm factory to GitHub and deploy to Render for 24/7 operation.
 
----
+## 🛠 Setup & Local Running
+1. **Clone the repository.**
+2. **Install dependencies:**
+   ```bash
+   pip install -r backend/requirements.txt
+   ```
+3. **Run the server:**
+   ```bash
+   uvicorn backend.main:app --reload
+   ```
+4. **Access the UI:** Open `http://localhost:8000` in your browser.
 
-## 🚀 Quick Start
+## 📦 Persistence & Render Deployment
+To keep your agents running indefinitely:
+1. Generate a [GitHub Personal Access Token (PAT)](https://github.com/settings/tokens) with `repo` scope.
+2. Enter your PAT and desired repository name in the **Deploy & Persist** section of the UI.
+3. Click **PUSH TO GITHUB**.
+4. Log into [Render.com](https://render.com).
+5. Create a new **Web Service** and connect the newly created GitHub repository.
+6. Render will automatically detect the `render.yaml` and deploy your Dark Swarm Factory.
 
-```bash
-pip install -r requirements.txt
-streamlit run Main.py
-```
-
-## ☁️ Hosting on Render
+## 🔒 Security & Privacy
+The **Stealth Mode** toggle ensures that agents follow strict protocols to scrub PII and proprietary logic from their thought processes, minimizing the footprint shared with LLM providers like Groq, OpenAI, or Anthropic.
 
 [![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy)
-
-You can easily host this factory on [Render](https://render.com):
-
-1. **New Web Service**: Connect your GitHub repository.
-2. **Runtime**: Select `Python 3`.
-3. **Build Command**: `pip install -r requirements.txt`
-4. **Start Command**: `streamlit run Main.py --server.port $PORT`
-5. **Environment Variables**: Render will automatically provide the `PORT`. You can optionally pre-set `GROQ_API_KEY` if you want a default key.
-
-### 🚀 One-Click Blueprint
-This repository includes a `render.yaml` file. You can use Render's **Blueprints** feature to automatically deploy the app with the correct configuration.
-
-1. Add your Groq API keys in the sidebar (as many as you have)
-2. Select your model (`llama-3.3-70b-versatile` recommended)
-3. Type detailed instructions in the main panel
-4. Hit **Launch Swarm**
-5. Download the ZIP
-
----
-
-## 🔑 Groq Multi-Key System
-
-The `GroqKeyPool` class manages all your keys automatically:
-
-| Feature | Detail |
-|---------|--------|
-| Key rotation | Each agent gets its own key (round-robin if fewer keys than agents) |
-| Rate-limit detection | Catches `429` and `"rate limit"` errors, cools that key for 62s |
-| Auto-recovery | After cooldown, key re-enters the pool transparently |
-| Error retirement | Key retired after 3 consecutive hard errors |
-| Live status | Sidebar shows each key as `idle / active / resting / error` |
-| Usage counter | Tracks how many times each key was used |
-
-**Recommended:** Get free keys at [console.groq.com](https://console.groq.com) — you can have multiple accounts. With 3+ keys you'll rarely hit a cooldown.
-
----
-
-## 📋 How to Write Instructions
-
-Be specific. The swarm reads your instructions literally and distributes them across agents.
-
-**Good instruction includes:**
-- Domain / business context
-- Named entities (what are the data models?)
-- Feature list with rules and constraints
-- API endpoints you need
-- Auth requirements
-- Tech preferences (FastAPI vs Streamlit, SQL vs NoSQL)
-
-**Example:**
-```
-Build a stokvel platform for South African farmers.
-
-Members: register with name, phone, farm location, crop type.
-Contributions: R500/month, 3% fee to platform fund.
-Payouts: rotating monthly (round-robin), members can view schedule.
-Micro-loans: up to 2× contributions, 5% interest to community fund, majority vote approval.
-Community fund: bulk purchases, emergency crop-failure support.
-
-Tech: FastAPI, PostgreSQL, JWT auth, Streamlit dashboard.
-```
-
----
-
-## 🤖 Swarm Roles
-
-| Icon | Role | Responsibility |
-|------|------|---------------|
-| 🎯 | Swarm Commander | Architecture, orchestration, requirement parsing |
-| ⚙️ | Backend Engineer | Core FastAPI / Streamlit application |
-| 🗄️ | Database Architect | SQLAlchemy models, Pydantic schemas, SwarmMemory |
-| 🔌 | API Designer | RESTful routes, validation, OpenAPI docs |
-| 🛡️ | Security & DevOps | Dockerfile, docker-compose, .env, rate limiting |
-| 🧪 | QA & Test Engineer | pytest suites, fixtures, integration tests |
-| 📖 | Documentation | README, docstrings, setup guides |
-| 🔍 | Code Reviewer | Quality review, bug detection, security check |
-
-Use the **Swarm Size** slider (2–8) to deploy a subset.
-
----
-
-## 📁 Generated Project Structure
-
-```
-swarm_YYYYMMDD_HHMMSS/
-├── main.py                    # Application entry (AI-written ✨)
-├── models/
-│   ├── models.py              # SQLAlchemy ORM models ✨
-│   └── schemas.py             # Pydantic v2 schemas ✨
-├── routes/
-│   └── api.py                 # FastAPI routes ✨
-├── utils/
-│   └── helpers.py             # Utilities ✨
-├── memory/
-│   └── swarm_memory.py        # PostgreSQL + fallback memory ✨
-├── tests/
-│   ├── conftest.py            # pytest fixtures
-│   └── test_main.py           # Test suite ✨
-├── logs/
-│   └── cycle_N.log            # Per-cycle CrewAI logs
-├── requirements.txt
-├── Dockerfile                 # Multi-stage production build
-├── docker-compose.yml         # App + PostgreSQL + Redis
-├── .env.example               # All required env vars
-└── .gitignore
-```
-
----
-
-## ⚙️ Environment Variables
-
-| Variable | Purpose |
-|----------|---------|
-| `APP_ENV` | `development` or `production` |
-| `SECRET_KEY` | JWT / session secret |
-| `DATABASE_URL` | Full PostgreSQL connection string |
-| `POSTGRES_*` | Individual DB connection parts (for docker-compose) |
-| `REDIS_URL` | Optional Redis for caching |
-| `GROQ_API_KEY_*` | Your Groq keys (managed by the sidebar, not .env) |
-
----
-
-## 📜 License
-
-MIT © 2026 mpho sekati
