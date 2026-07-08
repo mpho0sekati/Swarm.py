@@ -390,18 +390,23 @@ def safe_str(result) -> str:
 def extract_files_from_result(text: str) -> dict[str, str]:
     """Extract labelled and heuristically-identified code blocks from LLM output."""
     files: dict[str, str] = {}
-    segments = re.split(r"```(?:python|bash|yaml|dockerfile|markdown|md|sh|toml|env|)\n", text)
+    # More inclusive regex for code blocks
+    segments = re.split(r"```[a-zA-Z0-9]*\n", text)
     for seg in segments[1:]:
         end = seg.find("\n```")
         code = seg[:end].strip() if end != -1 else seg.strip()
         if not code:
             continue
-        # Explicit label
-        m = re.search(r"#\s*FILE:\s*(\S+\.(?:py|yml|yaml|md|txt|env|gitignore|toml))", code)
+
+        # Explicit label check (strongest indicator)
+        # Supports: # FILE: path/to/file.ext or // FILE: path/to/file.ext or <!-- FILE: path/to/file.ext -->
+        m = re.search(r"(?:#|//|<!--)\s*FILE:\s*(\S+)", code)
         if m:
-            files[m.group(1).strip()] = code
+            filename = m.group(1).strip().rstrip("-->").strip()
+            files[filename] = code
             continue
-        # Heuristics
+
+        # Heuristics for fallback (only if no explicit label)
         if code.startswith("FROM "):
             files.setdefault("Dockerfile", code); continue
         if re.search(r"^\s*services:", code, re.MULTILINE):
@@ -410,6 +415,8 @@ def extract_files_from_result(text: str) -> dict[str, str]:
             files.setdefault(".env.example", code); continue
         if code.startswith("# ") and "\n## " in code:
             files.setdefault("README.md", code); continue
+
+        # If it looks like code but we don't have a name, give it a generic one or try to guess extension
         if "def " in code or "class " in code or "import " in code:
             if "pytest" in code or "def test_" in code:
                 files.setdefault("tests/test_main.py", code)
@@ -422,7 +429,11 @@ def extract_files_from_result(text: str) -> dict[str, str]:
             elif "FastAPI" in code or "st.set_page_config" in code or "__name__" in code:
                 files.setdefault("main.py", code)
             else:
-                files.setdefault("utils/helpers.py", code)
+                files.setdefault(f"generated_file_{len(files)+1}.py", code)
+        else:
+            # Last resort generic filename
+            files.setdefault(f"output_{len(files)+1}.txt", code)
+
     return files
 
 
@@ -549,6 +560,77 @@ def build_tasks(instructions: str, agents: list[Agent], cycle: int) -> list[Task
     ))
 
     return tasks
+
+
+def plan_swarm(instructions: str, pool: GroqKeyPool, swarm_size: int) -> tuple[list[dict], list[dict]]:
+    """Uses LLM to plan a custom swarm for the given instructions."""
+    # Pick a key for planning without incrementing used_count too early if possible,
+    # but using get_llm is safest to ensure we respect rotation/cooldown.
+    llm, _ = pool.get_llm()
+
+    prompt = f"""
+    You are the Swarm Architect. Analyze these instructions and design a specialized swarm of exactly {swarm_size} agents to accomplish them.
+
+    INSTRUCTIONS:
+    {instructions}
+
+    Return a JSON object with two keys:
+    1. "agents": A list of {swarm_size} agents. Each agent must have:
+       - "role": Unique title (e.g., "Market Researcher")
+       - "goal": Clear objective
+       - "backstory": Professional background
+       - "icon": A single emoji representing the role
+    2. "tasks": A list of 3-7 tasks to be performed sequentially. Each task must have:
+       - "description": Detailed instructions for the task
+       - "expected_output": What the task should produce
+       - "role": THE EXACT "role" string of the agent assigned to this task (must match one from the agents list)
+
+    Constraints:
+    - Focus on high-quality, practical outputs.
+    - Respond ONLY with the raw JSON.
+    """
+
+    try:
+        from groq import Groq
+        # Ensure we have the API key. llm.api_key is standard for crewai.LLM
+        api_key = getattr(llm, "api_key", os.environ.get("GROQ_API_KEY"))
+        client = Groq(api_key=api_key)
+        # Remove 'groq/' prefix if present for direct groq client
+        model_name = llm.model.replace("groq/", "")
+        resp = client.chat.completions.create(
+            messages=[{"role": "user", "content": prompt}],
+            model=model_name,
+            temperature=0.2,
+            response_format={"type": "json_object"}
+        )
+        response = resp.choices[0].message.content
+    except Exception as e:
+        logging.error(f"Groq direct call failed: {e}")
+        # Fallback to crewai LLM call if possible
+        try:
+            # message format for crewai LLM call
+            response = llm.call([{"role": "user", "content": prompt}])
+        except Exception as e2:
+            logging.error(f"CrewAI LLM call fallback failed: {e2}")
+            raise RuntimeError(f"Failed to get planning response from Groq: {e}")
+
+    # Clean response in case of markdown blocks or preamble
+    clean_json = re.sub(r"```json\n?|\n?```", "", response).strip()
+    if not clean_json.startswith("{"):
+        match = re.search(r"\{.*\}", clean_json, re.DOTALL)
+        if match:
+            clean_json = match.group(0)
+
+    try:
+        plan = json.loads(clean_json)
+        return plan["agents"], plan["tasks"]
+    except Exception as e:
+        # Emergency fallback if JSON fails
+        logging.error(f"JSON Planning failed: {e}. Raw response: {response}")
+        fallback_agents = AGENT_ROLES[:swarm_size]
+        # Create a simple task list
+        fallback_tasks = [{"description": instructions, "expected_output": "Comprehensive result", "role": fallback_agents[0]["role"]}]
+        return fallback_agents, fallback_tasks
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -824,22 +906,34 @@ with st.sidebar:
     st.divider()
     st.markdown("<div style='font-size:11px; color:#555; margin-bottom:6px;'>SWARM SETTINGS</div>", unsafe_allow_html=True)
 
+    swarm_mode = st.radio("Swarm Mode", ["Software Factory", "Autonomous Swarm"], index=0,
+        help="Software Factory uses a fixed team for app building. Autonomous Swarm designs a custom team for any task.")
+
     max_cycles  = st.slider("Refinement Cycles", 1, 4, 2,
         help="Each cycle improves upon the previous output")
     swarm_size  = st.slider("Swarm Size", 2, 8, 5,
         help="Number of specialised agents")
-    scaffold    = st.toggle("Full project scaffold", value=True)
-    validate    = st.toggle("Syntax validation", value=True)
+
+    scaffold = False
+    validate = False
+    if swarm_mode == "Software Factory":
+        scaffold    = st.toggle("Full project scaffold", value=True)
+        validate    = st.toggle("Syntax validation", value=True)
 
     st.divider()
     st.markdown("<div style='font-size:11px; color:#555; margin-bottom:6px;'>KEY → AGENT ASSIGNMENT</div>", unsafe_allow_html=True)
-    for i, r in enumerate(AGENT_ROLES[:swarm_size]):
-        key_label = f"Key {(i % len(valid_keys)) + 1}" if valid_keys else "—"
-        st.markdown(
-            f"<div style='font-size:11px; color:#444; padding:2px 0;'>"
-            f"{r['icon']} {r['role']} → <span style='color:#4ade80;'>{key_label}</span></div>",
-            unsafe_allow_html=True
-        )
+
+    display_roles = AGENT_ROLES if swarm_mode == "Software Factory" else st.session_state.get("dynamic_roles", [])
+    if not display_roles and swarm_mode == "Autonomous Swarm":
+        st.markdown("<div style='font-size:11px; color:#555; font-style:italic;'>Roles will be generated after launch</div>", unsafe_allow_html=True)
+    else:
+        for i, r in enumerate(display_roles[:swarm_size]):
+            key_label = f"Key {(i % len(valid_keys)) + 1}" if valid_keys else "—"
+            st.markdown(
+                f"<div style='font-size:11px; color:#444; padding:2px 0;'>"
+                f"{r.get('icon', '🤖')} {r['role']} → <span style='color:#4ade80;'>{key_label}</span></div>",
+                unsafe_allow_html=True
+            )
 
 # ─────────────────────────────────────────────────────────────────────────────
 # MAIN PANEL
@@ -912,13 +1006,20 @@ if launch and valid_keys and instructions.strip():
 
     project_name = f"swarm_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
     project_path = Path(project_name)
-    for folder in ["models", "routes", "utils", "memory", "tests", "logs"]:
-        (project_path / folder).mkdir(parents=True, exist_ok=True)
-    for pkg in ["memory", "models", "routes", "utils", "tests"]:
-        (project_path / pkg / "__init__.py").write_text("")
+    if swarm_mode == "Software Factory":
+        for folder in ["models", "routes", "utils", "memory", "tests", "logs"]:
+            (project_path / folder).mkdir(parents=True, exist_ok=True)
+        for pkg in ["memory", "models", "routes", "utils", "tests"]:
+            (project_path / pkg / "__init__.py").write_text("")
+    else:
+        (project_path / "logs").mkdir(parents=True, exist_ok=True)
 
     # Initialise key pool
     pool = GroqKeyPool(valid_keys, selected_model)
+
+    # ── Initialise display roles if not already set (Software mode) ──────
+    if swarm_mode == "Software Factory":
+        display_roles = AGENT_ROLES
 
     # ── Layout ────────────────────────────────────────────────────────────
     status_ph   = st.empty()
@@ -951,7 +1052,8 @@ if launch and valid_keys and instructions.strip():
 
     def render_agents():
         html = ""
-        for r in AGENT_ROLES[:swarm_size]:
+        curr_roles = display_roles[:swarm_size]
+        for r in curr_roles:
             s = a_status.get(r["role"], "waiting")
             c = s if s in ("active","done","error") else ""
             icon_map = {"active":"⟳","done":"✓","error":"✗","waiting":"·"}
@@ -976,7 +1078,22 @@ if launch and valid_keys and instructions.strip():
         render_agents()
 
     # ── Boot ──────────────────────────────────────────────────────────────
-    for r in AGENT_ROLES[:swarm_size]:
+    if swarm_mode == "Autonomous Swarm":
+        status_ph.info("✨ Swarm Architect is planning your custom team...")
+        log("info", "Planning custom swarm...")
+        try:
+            dynamic_agents, dynamic_tasks = plan_swarm(instructions, pool, swarm_size)
+            st.session_state.dynamic_roles = dynamic_agents
+            st.session_state.dynamic_tasks = dynamic_tasks
+            # Update display_roles for the rest of the execution
+            display_roles = dynamic_agents
+            log("ok", f"Plan created: {len(dynamic_agents)} agents, {len(dynamic_tasks)} tasks")
+        except Exception as e:
+            status_ph.error(f"Planning failed: {e}")
+            log("err", f"Planning failed: {e}")
+            st.stop()
+
+    for r in display_roles[:swarm_size]:
         set_status(r["role"], "waiting")
     render_keys()
 
@@ -995,7 +1112,7 @@ if launch and valid_keys and instructions.strip():
             agents: list[Agent] = []
             key_assignments: list[int] = []
 
-            roles_to_use = AGENT_ROLES[:swarm_size]
+            roles_to_use = display_roles[:swarm_size]
             for idx, r in enumerate(roles_to_use):
                 set_status(r["role"], "active")
                 llm, key_idx = pool.get_llm(preferred_idx=idx)
@@ -1011,9 +1128,22 @@ if launch and valid_keys and instructions.strip():
                     max_retry_limit=2,
                 ))
                 render_keys()
-                log("", f"  {r['icon']} {r['role']} → Key {key_idx+1}")
+                log("", f"  {r.get('icon', '🤖')} {r['role']} → Key {key_idx+1}")
 
-            tasks = build_tasks(instructions, agents, cycle)
+            if swarm_mode == "Software Factory":
+                tasks = build_tasks(instructions, agents, cycle)
+            else:
+                # Build dynamic tasks
+                tasks = []
+                role_map = {a.role: a for a in agents}
+                for t_data in st.session_state.dynamic_tasks:
+                    assigned_agent = role_map.get(t_data["role"], agents[0])
+                    tasks.append(Task(
+                        description=t_data["description"] + (f"\n\nRefinement cycle {cycle}." if cycle > 1 else ""),
+                        expected_output=t_data["expected_output"],
+                        agent=assigned_agent
+                    ))
+
             log("", f"Tasks queued: {len(tasks)}")
 
             crew = Crew(
@@ -1125,15 +1255,15 @@ if launch and valid_keys and instructions.strip():
 
         # ── Code preview tab ──────────────────────────────────────────────
         with tabs[1]:
-            py_files = {k: v for k, v in all_files.items() if k.endswith(".py")}
-            if py_files:
-                sel = st.selectbox("File", list(py_files.keys()))
-                st.code(py_files[sel], language="python", line_numbers=True)
+            if all_files:
+                sel = st.selectbox("File", list(all_files.keys()))
+                lang = "python" if sel.endswith(".py") else "markdown" if sel.endswith(".md") else None
+                st.code(all_files[sel], language=lang, line_numbers=True)
                 if sel in val_results:
                     ok, err = val_results[sel]
                     st.success("✅ Syntax valid") if ok else st.warning(f"⚠️ {err}")
             else:
-                st.info("No Python files extracted — check raw output in Summary tab.")
+                st.info("No files extracted — check raw output in Summary tab.")
 
         # ── Summary tab ───────────────────────────────────────────────────
         with tabs[2]:

@@ -1,0 +1,7 @@
+streamlit
+crewai
+groq
+litellm
+crewai-tools
+pydantic
+python-dotenv
