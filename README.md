@@ -9,9 +9,19 @@
 ## 🚀 Quick Start
 
 ```bash
-pip install streamlit crewai groq
+pip install -r requirements.txt
 streamlit run Main.py
 ```
+
+## ☁️ Hosting on Render
+
+You can easily host this factory on [Render](https://render.com):
+
+1. **New Web Service**: Connect your GitHub repository.
+2. **Runtime**: Select `Python 3`.
+3. **Build Command**: `pip install -r requirements.txt`
+4. **Start Command**: `streamlit run Main.py --server.port $PORT`
+5. **Environment Variables**: Render will automatically provide the `PORT`. You can optionally pre-set `GROQ_API_KEY` if you want a default key.
 
 1. Add your Groq API keys in the sidebar (as many as you have)
 2. Select your model (`llama-3.3-70b-versatile` recommended)
