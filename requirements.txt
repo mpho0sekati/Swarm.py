@@ -1,7 +1,11 @@
-streamlit
+fastapi
+uvicorn
 crewai
-groq
-litellm
 crewai-tools
+litellm
 pydantic
 python-dotenv
+websockets
+python-multipart
+groq
+PyGithub
