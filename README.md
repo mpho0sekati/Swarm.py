@@ -15,7 +15,7 @@ streamlit run Main.py
 
 ## ☁️ Hosting on Render
 
-[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy)
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/mpho0sekati/Swarm.py)
 
 You can easily host this factory on [Render](https://render.com):
 
